@@ -37,7 +37,7 @@ def authenticate():
             hash = False
         else:
             hash = True
-        event, values = login.read()
+        event, = login.read()
         if event == 'Cancel' or event == sg.WIN_CLOSED:
             login.close()
             c.close()

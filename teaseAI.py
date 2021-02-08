@@ -1,30 +1,30 @@
 import PySimpleGUI as sg
 from PySimpleGUI.PySimpleGUI import RELIEF_SUNKEN, TITLE_LOCATION_TOP
 from PySide2 import QtWidgets
+import multiprocessing as mp
 import sys
 import time as t
-#from client import Client
-#from functions import chat, hotkey
+from client import Client
+from functions import hotkey
 from tags import popup
 from images import SlideShow
 from options import OPTIONS, open_options, save_config
-from authenticate import authenticate
+from git import Repo, Remote
+from server import Server
 
+mp.set_start_method('fork')
 
 sg.theme(OPTIONS['THEME'])
 sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
 
 main_menu = [
     ['&File', ['E&xit']],
-    ['&Tags', ['Image Tagging']],
+    ['&Server', ['Start Server', 'Kill Server', 'Connect to Server']],
     ['&Options', ['Options Menu']],
     ['&Debug', ['BLANK']],
     ['&About', ['BLANK']]
 ]
 
-if authenticate() == 1:
-    save_config()
-    sys.exit()
 
 ONLINE_USERS = [
     [sg.T(OPTIONS['DOMME_NAME'], k='DOMME_NAME', size = (40, 1))],
@@ -81,79 +81,95 @@ window.bind('<KP_2>', 'HOTKEY_2')
 window.bind('<KP_3>', 'HOTKEY_3')
 window.bind('<KP_0>', 'HOTKEY_0')
 
+repo = Repo()
+if not repo:
+    repo = Repo.init()
+    remote = Remote(repo, 'origin')
+    remote.set_url('https://github.com/threadreaper/autodomme')
+else: 
+    remote = repo.remotes[0]
 
-
+remote.update()
 
 app = QtWidgets.QApplication([])
-#slideshow = SlideShow(OPTIONS['DOMME_IMAGE_DIR'], window)
-#if len(slideshow.images) > 0: 
- #   slideshow.show()
-time = t.time()
+slideshow = SlideShow(OPTIONS['DOMME_IMAGE_DIR'], window)
+if len(slideshow.images) > 0: 
+   slideshow.show()
 
 
-# Run the Event Loop
-while True:
-    #message = chat.update()
-    #if message:
-     #   sg.cprint(message)
-   # dt = t.time() - time
-   # slideshow.update(dt)
+server = Server()
+
+def main():
     time = t.time()
-    event, values = window.read(timeout=50)
-    if event == 'Image Tagging':
-   #     popup()
-        pass
-    if event == "Options Menu":
-        options = open_options()
-        while True:
-            opt_event, opt_vals = options.read()
-            if opt_event == "Exit" or opt_event == sg.WIN_CLOSED:
-                break
-            elif opt_event == 'Browse':
-                dialog = QtWidgets.QFileDialog.getExistingDirectory(None, "Select Folder", OPTIONS['DOMME_IMAGE_DIR'])
-                OPTIONS['DOMME_IMAGE_DIR'] = dialog
-                options['DOMME_IMAGE_DIR'].update(OPTIONS['DOMME_IMAGE_DIR'])
-            if opt_event == 'THEME':
-                sg.theme(opt_vals[opt_event][0])
-                old = options
-                options = open_options()
-                old.close()      
-            elif opt_event in OPTIONS:
-                OPTIONS[opt_event] = opt_vals[opt_event]
-                if window[opt_event]:
-                    if isinstance(window[opt_event], sg.Text):
-                        window[opt_event].update(opt_vals[opt_event])
-                    elif isinstance(window[opt_event], sg.Button):
-                        window[opt_event].update(text=f"{OPTIONS[opt_event]}\n\n{opt_event[-1]}")
+    while True:
+        #message = chat.update()
+        #if message:
+        #   sg.cprint(message)
+        dt = t.time() - time
+        slideshow.update(dt)
+        time = t.time()
+        event, values = window.read(timeout=50)
+        if event == 'Image Tagging':
+            popup()
+            pass
+        if event == 'Start Server':        
+            server.set_up_server()
+        elif event == 'Kill Server':
+            server.exit_event.set()
+        elif event == 'Connect to Server':
+            client = Client(OPTIONS['SUB_NAME'])
+        elif event == "Options Menu":
+            options = open_options()
+            while True:
+                opt_event, opt_vals = options.read()
+                if opt_event == "Exit" or opt_event == sg.WIN_CLOSED:
+                    break
+                elif opt_event == 'Browse':
+                    dialog = QtWidgets.QFileDialog.getExistingDirectory(None, "Select Folder", OPTIONS['DOMME_IMAGE_DIR'])
+                    OPTIONS['DOMME_IMAGE_DIR'] = dialog
+                    options['DOMME_IMAGE_DIR'].update(OPTIONS['DOMME_IMAGE_DIR'])
+                elif opt_event == 'THEME':
+                    sg.theme(opt_vals[opt_event][0])
+                    old = options
+                    options = open_options()
+                    old.close()      
+                elif opt_event in OPTIONS:
+                    OPTIONS[opt_event] = opt_vals[opt_event]
+                    if window[opt_event]:
+                        if isinstance(window[opt_event], sg.Text):
+                            window[opt_event].update(opt_vals[opt_event])
+                        elif isinstance(window[opt_event], sg.Button):
+                            window[opt_event].update(text=f"{OPTIONS[opt_event]}\n\n{opt_event[-1]}")
+                    else:
+                        pass                                 
+                elif 'ADV_METHOD' in (opt_event):
+                    OPTIONS['ADV_METHOD'] = str(opt_event)
                 else:
-                    pass                                 
-            elif 'ADV_METHOD' in (opt_event):
-                OPTIONS['ADV_METHOD'] = str(opt_event)
-            else:
-                print(f'Event: {opt_event}')
-        options.close()
-    elif event == "Exit" or event == sg.WIN_CLOSED:
-        break
-    elif event == 'Right:114' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
-   #     slideshow.next()
-        pass
-    elif event == 'Left:113' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
-   #     slideshow.back()
-        pass
-    elif event == 'Submit':
-    #    chat.push(f'{OPTIONS["SUB_NAME"]}:{window["INPUT"].get()}')
-   #     chat.respond(window['INPUT'].get())
-        window['INPUT'].update(value='')
-        pass
-    elif 'HOTKEY' in event:
-        if window.find_element_with_focus() != window['INPUT']:
-     #       hotkey(event)
-            window['INPUT'].update('')
-        
-    else:
-        if event != '__TIMEOUT__':
-            print(f'Event: {event}')
+                    print(f'Event: {opt_event}')
+            options.close()
+        elif event == "Exit" or event == sg.WIN_CLOSED:
+            break
+        elif event == 'Right:114' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
+            slideshow.next()
+            pass
+        elif event == 'Left:113' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
+            slideshow.back()
+            pass
+        elif event == 'Submit':
+            sg.cprint(values[event])
+            pass
+        elif 'HOTKEY' in event:
+            if window.find_element_with_focus() != window['INPUT']:
+                hotkey(event)
+                window['INPUT'].update('')
+            
+        else:
+            if event != '__TIMEOUT__':
+                print(f'Event: {event}')
 
+main()
+
+server.exit_event.set()
 save_config()
 window.close()
 sys.exit(app.exec_)

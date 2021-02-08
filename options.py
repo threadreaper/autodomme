@@ -65,10 +65,8 @@ def load_config():
 
 
 options = load_config()
-print(options)
 OPTIONS = {}
 for option in options:
-    print('setting %s' % option)
     OPTIONS[option] = options[option]
 
 
@@ -150,7 +148,6 @@ def open_options():
     return sg.Window("Options", layout, size=(1280,720))
 
 def save_config():
-    print('saving configuration')
     with open("config.json", 'w') as file:
         OPTIONS['PASSWORD'] = OPTIONS['PASSWORD']
         config = json.dumps(OPTIONS)
