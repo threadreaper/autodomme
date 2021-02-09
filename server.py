@@ -1,4 +1,4 @@
-#!usr/bin/python
+#!/usr/bin/env python3
 import socket
 from threading import Thread, Event
 from PySimpleGUI.PySimpleGUI import obj_to_string

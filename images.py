@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from random import randint
 from PIL import Image, ImageOps
 from options import OPTIONS

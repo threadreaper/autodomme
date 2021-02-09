@@ -1,3 +1,5 @@
+# functions to be exposed to userspace scripts
+
 import PySimpleGUI as sg
 from options import OPTIONS
 import sqlite3

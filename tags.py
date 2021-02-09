@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import PySimpleGUI as sg
 from options import OPTIONS
 import os

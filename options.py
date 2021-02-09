@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import PySimpleGUI as sg
 import json
 from PySimpleGUI.PySimpleGUI import LISTBOX_SELECT_MODE_SINGLE

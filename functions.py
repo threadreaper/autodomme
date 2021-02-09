@@ -1,4 +1,6 @@
+#!/usr/bin/env python3
 # functions to be exposed to userspace scripts
+
 from options import OPTIONS
 
 class ChatServer():

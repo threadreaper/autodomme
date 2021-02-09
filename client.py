@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread, Lock
 from cryptography.hazmat.primitives import hashes, serialization
