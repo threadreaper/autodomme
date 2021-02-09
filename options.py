@@ -35,6 +35,7 @@ def load_config():
         OPTIONS['USERNAME'] = ''
         OPTIONS['PASSWORD'] = ''
         OPTIONS['SAVE_CREDENTIALS'] = True
+        OPTIONS['CHAT_NAME'] = ''
         options=OPTIONS
     except json.decoder.JSONDecodeError:
         sg.popup_ok('Config file is invalid.\nUsing configuration defaults.', modal=True)
@@ -59,9 +60,11 @@ def load_config():
         OPTIONS['USERNAME'] = ''
         OPTIONS['PASSWORD'] = ''
         OPTIONS['SAVE_CREDENTIALS'] = True
+        OPTIONS['CHAT_NAME'] = ''
         options = OPTIONS
     finally:
         return options
+
 
 
 options = load_config()
@@ -75,6 +78,7 @@ for option in options:
 def open_options():
     general_options = [
         [sg.T('General Options')],
+        [sg.T('Username for Chat:'), sg.Input(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME')],
         [sg.Checkbox('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'], key='RANDOMIZE',
         tooltip='When enabled, randomizes the order of image slideshows', enable_events=True)],
         [sg.HorizontalSeparator()], 
@@ -106,7 +110,6 @@ def open_options():
         [sg.T("Domme's Image Directory:")],
         [sg.Input(OPTIONS['DOMME_IMAGE_DIR'], size=(20, 1), key='DOMME_IMAGE_DIR', enable_events=True),
         sg.B('Browse')]
-        #sg.FolderBrowse(target='DOMME_IMAGE_DIR', initial_folder=OPTIONS['DOMME_IMAGE_DIR'])]
     ]
 
     sub_options = [
@@ -149,7 +152,6 @@ def open_options():
 
 def save_config():
     with open("config.json", 'w') as file:
-        OPTIONS['PASSWORD'] = OPTIONS['PASSWORD']
         config = json.dumps(OPTIONS)
         file.write(config)
         file.close()

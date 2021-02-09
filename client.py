@@ -6,6 +6,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization.base import load_pem_public_key
 import PySimpleGUI as sg
 from options import OPTIONS
+from distutils.util import strtobool
+
 
 class Client:
     """
@@ -16,11 +18,13 @@ class Client:
     ADDR = (HOST, PORT)
     BUFSIZ = 512
     
-    def __init__(self, name):
+    def __init__(self, window):
         """
         Init object and send name to server
         :param name: str
         """
+        self.window = window
+        self.chat_name = OPTIONS['CHAT_NAME']
         self.username = OPTIONS['USERNAME']
         self.password = OPTIONS['PASSWORD']
         self.private_key = rsa.generate_private_key(
@@ -38,15 +42,23 @@ class Client:
         self.srv_key = load_pem_public_key(self.client_socket.recv(833))
         if isinstance(self.srv_key, rsa.RSAPublicKey):
             if not self.authenticate():
-                print('Authentication failur - conneciton rejected')
+                print('Authentication failure - connection rejected')
             else:
                 self.messages = []
                 receive_thread = Thread(target=self.receive_messages)
                 receive_thread.start()
-                self.send_message(name)
+                self.send_message(self.chat_name)
                 self.lock = Lock()
         else:
             print('Key handshake failure - connection rejected')
+    
+    def update_window(self, user):
+        txt = self.window['ONLINE_USERS'].get()
+        if f"{user}\n" not in txt:
+            self.window['ONLINE_USERS'].update(f'{user}\n', append=True)
+        else:
+            self.window['ONLINE_USERS'].update(txt.strip(user), append=False)
+
         
 
     def decrypt(self, msg):
@@ -72,6 +84,8 @@ class Client:
                     break
                 else:
                     msg = self.decrypt(msg)
+                    if 'has joined the chat' in msg or 'has left the chat' in msg:
+                        self.update_window(msg.split()[0])
                     sg.cprint(msg)
                 # make sure memory is safe to access
                 self.lock.acquire()
@@ -121,7 +135,6 @@ class Client:
     def disconnect(self):
         self.send_message("/quit")
 
-
     def authenticate(self):
         
         login_layout = [
@@ -138,11 +151,11 @@ class Client:
             event = login.read()[0]
             if event == 'Cancel' or event == sg.WIN_CLOSED:
                 login.close()
-                return 1            
+                return False           
             elif event == 'Submit':
                 username = login['USERNAME'].get()
                 password = login['PASSWORD'].get()
                 self.send_message('%s %s' % (username, password))
-                answer = self.client_socket.recv(512)
+                answer = self.decrypt(self.client_socket.recv(512))
                 login.close()
-                return [True if answer == 'True' else False]
+                return [strtobool(answer)]

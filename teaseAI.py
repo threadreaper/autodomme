@@ -1,21 +1,17 @@
 import PySimpleGUI as sg
-from PySimpleGUI.PySimpleGUI import RELIEF_SUNKEN, TITLE_LOCATION_TOP
 from PySide2 import QtWidgets
-import multiprocessing as mp
 import sys
 import time as t
 from client import Client
-from functions import hotkey
-from tags import popup
 from images import SlideShow
 from options import OPTIONS, open_options, save_config
 from git import Repo, Remote
 from server import Server
+import sqlite3
 
-mp.set_start_method('fork')
 
 sg.theme(OPTIONS['THEME'])
-sg.set_options(suppress_raise_key_errors=False, suppress_error_popups=True, suppress_key_guessing=True)
+
 
 main_menu = [
     ['&File', ['E&xit']],
@@ -25,16 +21,10 @@ main_menu = [
     ['&About', ['BLANK']]
 ]
 
-
-ONLINE_USERS = [
-    [sg.T(OPTIONS['DOMME_NAME'], k='DOMME_NAME', size = (40, 1))],
-    [sg.T(OPTIONS['SUB_NAME'], k='SUB_NAME', size = (40, 1))]
-]
-
 sidebar = [
     [sg.T(" Online Users:", pad = (3, 2))],
-    [sg.Frame(None, ONLINE_USERS, title_location=TITLE_LOCATION_TOP, 
-    relief=RELIEF_SUNKEN, k='ONLINE_USERS', pad = (3, 2))],
+    [sg.Multiline(size = (40, 3), k='ONLINE_USERS', do_not_clear=True, auto_refresh=True,
+    disabled=True)],
     [sg.Multiline("", size=(40, 38), pad=(3, 2), 
     do_not_clear=True, autoscroll=True, write_only=True, auto_refresh=True,
     disabled=True, reroute_cprint=True, k='CHAT')],
@@ -96,78 +86,72 @@ slideshow = SlideShow(OPTIONS['DOMME_IMAGE_DIR'], window)
 if len(slideshow.images) > 0: 
    slideshow.show()
 
-
 server = Server()
 
-def main():
-    time = t.time()
-    while True:
-        #message = chat.update()
-        #if message:
-        #   sg.cprint(message)
-        dt = t.time() - time
-        slideshow.update(dt)
-        time = t.time()
-        event, values = window.read(timeout=50)
-        if event == 'Image Tagging':
-            popup()
-            pass
-        if event == 'Start Server':        
-            server.set_up_server()
-        elif event == 'Kill Server':
-            server.exit_event.set()
-        elif event == 'Connect to Server':
-            client = Client(OPTIONS['SUB_NAME'])
-        elif event == "Options Menu":
-            options = open_options()
-            while True:
-                opt_event, opt_vals = options.read()
-                if opt_event == "Exit" or opt_event == sg.WIN_CLOSED:
-                    break
-                elif opt_event == 'Browse':
-                    dialog = QtWidgets.QFileDialog.getExistingDirectory(None, "Select Folder", OPTIONS['DOMME_IMAGE_DIR'])
-                    OPTIONS['DOMME_IMAGE_DIR'] = dialog
-                    options['DOMME_IMAGE_DIR'].update(OPTIONS['DOMME_IMAGE_DIR'])
-                elif opt_event == 'THEME':
-                    sg.theme(opt_vals[opt_event][0])
-                    old = options
-                    options = open_options()
-                    old.close()      
-                elif opt_event in OPTIONS:
-                    OPTIONS[opt_event] = opt_vals[opt_event]
-                    if window[opt_event]:
-                        if isinstance(window[opt_event], sg.Text):
-                            window[opt_event].update(opt_vals[opt_event])
-                        elif isinstance(window[opt_event], sg.Button):
-                            window[opt_event].update(text=f"{OPTIONS[opt_event]}\n\n{opt_event[-1]}")
-                    else:
-                        pass                                 
-                elif 'ADV_METHOD' in (opt_event):
-                    OPTIONS['ADV_METHOD'] = str(opt_event)
-                else:
-                    print(f'Event: {opt_event}')
-            options.close()
-        elif event == "Exit" or event == sg.WIN_CLOSED:
-            break
-        elif event == 'Right:114' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
-            slideshow.next()
-            pass
-        elif event == 'Left:113' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
-            slideshow.back()
-            pass
-        elif event == 'Submit':
-            sg.cprint(values[event])
-            pass
-        elif 'HOTKEY' in event:
-            if window.find_element_with_focus() != window['INPUT']:
-                hotkey(event)
-                window['INPUT'].update('')
-            
-        else:
-            if event != '__TIMEOUT__':
-                print(f'Event: {event}')
+time = t.time()
+conn = sqlite3.connect('teaseai.db')
+c = conn.cursor()
+sg.set_options(suppress_raise_key_errors=True, suppress_error_popups=True, suppress_key_guessing=True)
+users = None
 
-main()
+while True:
+    dt = t.time() - time
+    slideshow.update(dt)
+    time = t.time()
+    event, values = window.read(timeout=50)
+    if event == "Exit" or event == sg.WIN_CLOSED:
+        break   
+    elif event == 'Start Server':        
+        server.set_up_server()
+    elif event == 'Kill Server':
+        server.exit_event.set()
+    elif event == 'Connect to Server':
+        client = Client(window)
+    elif event == 'Right:114' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
+        slideshow.next()
+    elif event == 'Left:113' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
+        slideshow.back()
+    elif event == 'Submit':
+        client.send_message(window['INPUT'].get())
+        window['INPUT'].update('')
+    elif 'HOTKEY_' in event:
+        if window.find_element_with_focus() != window['INPUT']:
+            client.send_message(OPTIONS[event])
+            window['INPUT'].update('')      
+    elif event == "Options Menu":
+        options = open_options()
+        while True:
+            opt_event, opt_vals = options.read()
+            print(opt_event)
+            if opt_event == "Exit" or opt_event == sg.WIN_CLOSED:
+                break
+            elif opt_event == 'Browse':
+                dialog = QtWidgets.QFileDialog.getExistingDirectory(None, "Select Folder", OPTIONS['DOMME_IMAGE_DIR'])
+                OPTIONS['DOMME_IMAGE_DIR'] = dialog
+                options['DOMME_IMAGE_DIR'].update(OPTIONS['DOMME_IMAGE_DIR'])
+            elif opt_event == 'THEME':
+                sg.theme(opt_vals[opt_event][0])
+                old = options
+                options = open_options()
+                old.close()      
+            elif opt_event in OPTIONS.keys():
+                OPTIONS[opt_event] = opt_vals[opt_event]    
+                if window[opt_event]:
+                    if isinstance(window[opt_event], sg.Text):
+                        window[opt_event].update(opt_vals[opt_event])
+                    elif isinstance(window[opt_event], sg.Button):
+                        window[opt_event].update(text=f"{OPTIONS[opt_event]}\n\n{opt_event[-1]}")
+                                               
+            elif 'ADV_METHOD' in (opt_event):
+                  OPTIONS['ADV_METHOD'] = opt_event
+            else:
+                print(f'Event: {opt_event}')
+        options.close()
+    elif event != '__TIMEOUT__':
+        print(f'Event: {event}')
+
+
+
 
 server.exit_event.set()
 save_config()
