@@ -137,8 +137,8 @@ while True:
             if opt_event in ["Exit", sG.WIN_CLOSED]:
                 break
             if opt_event == 'Browse':
-                browser = FileBrowser(options['DOMME_IMAGE_DIR'].get(),
-                                      OPTIONS['THEME'])
+                browser = FileBrowser(options['HOST_FOLDER'].get(),
+                                      OPTIONS['THEME'][3:])
                 browser.show()
             if window[opt_event] is not None:
                 if isinstance(window[opt_event], sG.Text):

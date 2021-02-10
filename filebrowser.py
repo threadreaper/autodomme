@@ -1,30 +1,54 @@
 #!/usr/bin/env python3
 """Custom filebrowser class and associated functions."""
 import os
+from io import BytesIO
 
 import PySimpleGUI as sG
+from PIL import Image, ImageOps
+
+from options import OPTIONS
 
 
 class FileBrowser():
     """Class for custom file browser widget."""
 
-    def __init__(self, path, theme):
+    def __init__(self, path, theme, history=None):
         """Args- path: full path to folder to launch the file browser in."""
-        sG.theme(theme)
-        self.history = [path]
+        self.theme = theme
+        sG.theme(self.theme)
+        self.history = history
         self.path = path
         self.treedata = sG.TreeData()
         self._add_folder('', self.path)
+
         self.layout = [
-            [sG.B('<<', k='BACK'), sG.B('^', k='UP'), sG.B('>>', k='RIGHT'),
-             sG.Input(path, size=(40, 1), k='PATH', enable_events=True)],
-            [sG.Tree(data=self.treedata, headings=[], justification='left',
-                     auto_size_columns=True, num_rows=20, col0_width=25,
-                     key='FILES', enable_events=True),
-             sG.Canvas(None, k='PREVIEW', background_color='#000000')],
-            [sG.B('Select'), sG.B('Cancel')]
+            [
+                sG.B('<<', k='BACK', disabled=(False, True)[
+                    self.history is None]),
+                sG.B('^', k='UP', disabled=(False, True)[
+                    self.path in [OPTIONS['HOST_FOLDER'], '/']]),
+                sG.Input(path, size=(40, 1), text_color='#000000',
+                         k='PATH', disabled=True),
+            ],
+            [
+                sG.Tree(
+                    data=self.treedata,
+                    headings=[],
+                    justification='left',
+                    num_rows=20,
+                    col0_width=40,
+                    key='FILES',
+                    enable_events=True,
+                ),
+                sG.Image(None, None, '#000000', (400, 400), k='IMAGE')
+            ],
+            [sG.Sizer(500, 1), sG.B('Select'), sG.B('Cancel')],
         ]
-        self.window = sG.Window('', layout=self.layout)
+
+        self.window = sG.Window('Browse For a directory',
+                                layout=self.layout, finalize=True)
+        self.window['IMAGE'].expand(expand_x=True, expand_y=True)
+        self.preview_frame = self.window['IMAGE'].get_size()
 
     def _add_folder(self, parent, path):
         """Add a folder to the tree - internal method only."""
@@ -33,17 +57,34 @@ class FileBrowser():
         files = []
         folders = []
         for item in os.listdir(path):
-            if os.path.isdir(item):
-                folders.append(item)
-            else:
-                files.append(item)
-        for folder in sorted(folders):
+            if not item.startswith('.'):
+                fqp = os.path.join(path, item)
+                if os.path.isdir(fqp):
+                    folders.append(item)
+                elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
+                    files.append(item)
+        for folder in sorted(folders, key=str.lower):
             fqp = os.path.join(self.path, folder)
             self.treedata.insert(parent, fqp, '  ' + folder, [fqp],
-                                 folder_icon)
+                                 icon=folder_icon)
         for file in sorted(files):
             fqp = os.path.join(self.path, file)
-            self.treedata.insert(parent, fqp, '  ' + file, [], file_icon)
+            self.treedata.insert(parent, fqp, '  ' + file, [], icon=file_icon)
+
+    def _change_path(self, path, history):
+        """Change path of the file browser - Internal use only"""
+        self.history = history
+        new = FileBrowser(path, self.theme, self.history)
+        new.show()
+
+    def preview(self, image, size):
+        """Display an image in the preview pane."""
+        img = Image.open(image)
+        img = ImageOps.pad(img, size=size)
+        with BytesIO() as bio:
+            img.save(bio, format="PNG")
+            del img
+            self.window['IMAGE'].update(data=bio.getvalue())
 
     def show(self):
         """Show the file browser window."""
@@ -53,8 +94,22 @@ class FileBrowser():
             event, values = self.window.read()
             if event in ['Cancel', sG.WIN_CLOSED]:
                 break
-            item = values[event][0]
-            print(item)
-            if os.path.isdir(item):
-                self._add_folder(item, item)
+            if event == 'UP':
+                self._change_path(os.path.dirname(self.path), self.path)
+                break
+            if event == 'BACK':
+                self._change_path(self.history, self.path)
+                break
+            if event == 'SELECT' and os.path.isdir(values[event][0]):
+                OPTIONS['HOST_FOLDER'] == values[event][0]
+            if os.path.isdir(values[event][0]):
+                self._change_path(values[event][0], self.path)
+                break
+            if os.path.isfile(values[event][0]):
+                self.preview(values[event][0], self.preview_frame)
         self.window.close()
+
+
+if __name__ == "__main__":
+    win = FileBrowser(OPTIONS['HOST_FOLDER'], 'DarkAmber')
+    win.show()

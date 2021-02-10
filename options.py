@@ -63,9 +63,9 @@ def open_options():
     """Open the options menu"""
     sG.theme(OPTIONS['THEME'][3:])
     col = [
-        [sG.T('Hostname/IP')],
-        [sG.T('Host Port')],
-        [sG.T('Host Folder')],
+        [sG.T('Hostname/IP', size=(15, 1))],
+        [sG.T('Host Port', size=(15, 1))],
+        [sG.T('Host Folder', size=(15, 1), enable_events=True)],
     ]
 
     col2 = [
@@ -74,7 +74,8 @@ def open_options():
         [sG.Input(OPTIONS['HOST_PORT'], size=(20, 1),
                   enable_events=True, k='HOST_PORT')],
         [sG.Input(OPTIONS['HOST_FOLDER'], size=(20, 1),
-                  enable_events=True, k='HOST_FOLDER')]
+                  enable_events=True, k='HOST_FOLDER'),
+         sG.B('Browse')]
     ]
 
     general_options = [
