@@ -31,7 +31,7 @@ sidebar = [
     [sg.T(" Online Users:", pad=(3, 2))],
     [sg.Multiline(size=(40, 3), k='ONLINE_USERS', do_not_clear=True,
      auto_refresh=True, disabled=True)],
-    [sg.Multiline("", size=(40, 38), pad=(3, 2), do_not_clear=True,
+    [sg.Multiline("", size=(40, 30), pad=(3, 2), do_not_clear=True,
      autoscroll=True, write_only=True, auto_refresh=True,
      disabled=True, reroute_cprint=True, k='CHAT')],
     [sg.Input('', size=(32, 4), do_not_clear=False, pad=(3, (2, 4)),
@@ -66,12 +66,12 @@ media_player = [
 
 layout = [
     [sg.Menu(main_menu, tearoff=False, pad=(0, 0)),
-     sg.Column(media_player, size=(1300, 900), element_justification='center',
+     sg.Column(media_player, size=(980, 800), element_justification='center',
      background_color='#000000', pad=(0, 0)),
      sg.Column(sidebar, vertical_alignment='top', pad=(0, 0))]
 ]
 
-window = sg.Window("TeaseAI", layout, margins=(0, 0), size=(1600, 900),
+window = sg.Window("TeaseAI", layout, margins=(0, 0), size=(1280, 800),
                    return_keyboard_events=True)
 window.finalize()
 window['INPUT'].expand(expand_y=True)
