@@ -22,7 +22,7 @@ class Client:
     for communication with server
     """
     HOST = OPTIONS['SERVER_ADDRESS']
-    PORT = OPTIONS['SERVER_PORT']
+    PORT = int(OPTIONS['SERVER_PORT'])
     ADDR = (HOST, PORT)
     BUFSIZ = 512
     
