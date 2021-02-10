@@ -2,32 +2,29 @@
 """Custom filebrowser class and associated functions."""
 import os
 
-import PySimpleGUI as sg
-
-from options import OPTIONS
-
-sg.theme(OPTIONS['THEME'])
+import PySimpleGUI as sG
 
 
 class FileBrowser():
     """Class for custom file browser widget."""
 
-    def __init__(self, path):
+    def __init__(self, path, theme):
         """Args- path: full path to folder to launch the file browser in."""
+        sG.theme(theme)
         self.history = [path]
         self.path = path
-        self.treedata = sg.TreeData()
+        self.treedata = sG.TreeData()
         self._add_folder('', self.path)
         self.layout = [
-            [sg.B('<<', k='BACK'), sg.B('^', k='UP'), sg.B('>>', k='RIGHT'),
-             sg.Input(path, size=(40, 1), k='PATH', enable_events=True)],
-            [sg.Tree(data=self.treedata, headings=[], justification='left',
+            [sG.B('<<', k='BACK'), sG.B('^', k='UP'), sG.B('>>', k='RIGHT'),
+             sG.Input(path, size=(40, 1), k='PATH', enable_events=True)],
+            [sG.Tree(data=self.treedata, headings=[], justification='left',
                      auto_size_columns=True, num_rows=20, col0_width=25,
                      key='FILES', enable_events=True),
-             sg.Canvas(None, k='PREVIEW', background_color='#000000')],
-            [sg.B('Select'), sg.B('Cancel')]
+             sG.Canvas(None, k='PREVIEW', background_color='#000000')],
+            [sG.B('Select'), sG.B('Cancel')]
         ]
-        self.window = sg.Window('', layout=self.layout)
+        self.window = sG.Window('', layout=self.layout)
 
     def _add_folder(self, parent, path):
         """Add a folder to the tree - internal method only."""
@@ -42,7 +39,8 @@ class FileBrowser():
                 files.append(item)
         for folder in sorted(folders):
             fqp = os.path.join(self.path, folder)
-            self.treedata.insert(parent, fqp, '  ' + folder, [fqp], folder_icon)
+            self.treedata.insert(parent, fqp, '  ' + folder, [fqp],
+                                 folder_icon)
         for file in sorted(files):
             fqp = os.path.join(self.path, file)
             self.treedata.insert(parent, fqp, '  ' + file, [], file_icon)
@@ -52,14 +50,11 @@ class FileBrowser():
         self.window.finalize()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
         while True:
-            event, values = self.window.read(timeout=50)
-            if event in ['Cancel', sg.WIN_CLOSED]:
+            event, values = self.window.read()
+            if event in ['Cancel', sG.WIN_CLOSED]:
                 break
-            if event != '__TIMEOUT__':
-                item = values[event][0]
-                print(item)
-                if os.path.isdir(item):
-                    self._add_folder(item, item)
+            item = values[event][0]
+            print(item)
+            if os.path.isdir(item):
+                self._add_folder(item, item)
         self.window.close()
-
-
