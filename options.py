@@ -42,8 +42,11 @@ def load_config():
         OPTIONS['PASSWORD'] = ''
         OPTIONS['SAVE_CREDENTIALS'] = True
         OPTIONS['CHAT_NAME'] = ''
-        OPTIONS['SERVER_PORT'] = ''
+        OPTIONS['SERVER_PORT'] = None
         OPTIONS['SERVER_ADDRESS'] = ''
+        OPTIONS['HOSTNAME'] = '0.0.0.0'
+        OPTIONS['HOST_PORT'] = None
+        OPTIONS['HOST_FOLDER'] = ''
         options=OPTIONS
     except json.decoder.JSONDecodeError:
         sg.popup_ok('Config file is invalid.\nUsing configuration defaults.', modal=True)
@@ -69,10 +72,10 @@ def load_config():
         OPTIONS['PASSWORD'] = ''
         OPTIONS['SAVE_CREDENTIALS'] = True
         OPTIONS['CHAT_NAME'] = ''
-        OPTIONS['SERVER_PORT'] = ''
+        OPTIONS['SERVER_PORT'] = None
         OPTIONS['SERVER_ADDRESS'] = ''
-        OPTIONS['HOSTNAME'] = ''
-        OPTIONS['HOST_PORT'] = ''
+        OPTIONS['HOSTNAME'] = '0.0.0.0'
+        OPTIONS['HOST_PORT'] = None
         OPTIONS['HOST_FOLDER'] = ''
         options = OPTIONS
     finally:
@@ -81,7 +84,6 @@ def load_config():
 
 options = load_config()
 OPTIONS = {option: options[option] for option in options}
-OPTIONS['HOST_FOLDER'] = ''
 
 col = [
     [sg.T('Hostname/IP')],
