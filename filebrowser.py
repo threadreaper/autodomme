@@ -23,7 +23,7 @@ class FileBrowser():
              sg.Input(path, size=(40, 1), k='PATH', enable_events=True)],
             [sg.Tree(data=self.treedata, headings=[], justification='left',
                      auto_size_columns=True, num_rows=20, col0_width=25,
-                     key='FILES'),
+                     key='FILES', enable_events=True),
              sg.Canvas(None, k='PREVIEW', background_color='#000000')],
             [sg.B('Select'), sg.B('Cancel')]
         ]
@@ -42,23 +42,24 @@ class FileBrowser():
                 files.append(item)
         for folder in sorted(folders):
             fqp = os.path.join(self.path, folder)
-            self.treedata.insert(parent, fqp, folder, folder_icon)
+            self.treedata.insert(parent, fqp, '  ' + folder, [fqp], folder_icon)
         for file in sorted(files):
             fqp = os.path.join(self.path, file)
-            self.treedata.insert(parent, fqp, file, [], file_icon)
+            self.treedata.insert(parent, fqp, '  ' + file, [], file_icon)
 
     def show(self):
         """Show the file browser window."""
         self.window.finalize()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
         while True:
-            event = self.window.read(timeout=50)[0]
+            event, values = self.window.read(timeout=50)
             if event in ['Cancel', sg.WIN_CLOSED]:
                 break
             if event != '__TIMEOUT__':
-                print(event)
+                item = values[event][0]
+                print(item)
+                if os.path.isdir(item):
+                    self._add_folder(item, item)
         self.window.close()
 
 
-gimme = FileBrowser('/home/michael/projects/teaseai')
-gimme.show()
