@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-import socket
-from threading import Thread, Event
-from PySimpleGUI.PySimpleGUI import obj_to_string
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import rsa
-import server
-import sqlite3
-import hashlib
 import binascii
-import os
+import hashlib
+import socket
+import sqlite3
+from threading import Event, Thread
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+
 
 private_key = rsa.generate_private_key(
     public_exponent=65537,
@@ -43,9 +41,8 @@ class Person:
         conn.close()
     
     def __repr__(self):
-        result = "The client: {0} with IP addr: {1}".format(
+        return "The client: {0} with IP addr: {1}".format(
             self.name, self.addr)
-        return result
 
 
 HOST = "0.0.0.0"
@@ -119,8 +116,8 @@ class Server(object):
         c = conn.cursor()
         auth_packet = person.client.recv(512)
         username, password = self.decrypt(auth_packet).split()
-        hash = (False, True)[len(password) > 15]
-        if hash == False:
+        pw_hash = (False, True)[len(password) > 15]
+        if not pw_hash:
             c.execute("SELECT salt FROM users WHERE username = ?", (username,))
             salt, = c.fetchone()
             key = hashlib.pbkdf2_hmac(

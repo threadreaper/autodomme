@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-from random import randint
-from PIL import Image, ImageOps
-from options import OPTIONS
 import os
 from io import BytesIO
-import PySimpleGUI as sg
+from random import randint
 
+import PySimpleGUI as sg
+from PIL import Image, ImageOps
+
+from options import OPTIONS
 
 #sg.theme(OPTIONS['THEME'])
 

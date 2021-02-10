@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
-import PySimpleGUI as sg
+import sys
 import json
-from PySimpleGUI.PySimpleGUI import LISTBOX_SELECT_MODE_SINGLE
 import os
+
+if sys.version_info[0] >= 3:
+    import PySimpleGUI as sg
+else:
+    import PySimpleGUI27 as sg
+
 
 
 def load_config():
@@ -37,6 +42,8 @@ def load_config():
         OPTIONS['PASSWORD'] = ''
         OPTIONS['SAVE_CREDENTIALS'] = True
         OPTIONS['CHAT_NAME'] = ''
+        OPTIONS['SERVER_PORT'] = ''
+        OPTIONS['SERVER_ADDRESS'] = ''
         options=OPTIONS
     except json.decoder.JSONDecodeError:
         sg.popup_ok('Config file is invalid.\nUsing configuration defaults.', modal=True)
@@ -62,46 +69,128 @@ def load_config():
         OPTIONS['PASSWORD'] = ''
         OPTIONS['SAVE_CREDENTIALS'] = True
         OPTIONS['CHAT_NAME'] = ''
+        OPTIONS['SERVER_PORT'] = ''
+        OPTIONS['SERVER_ADDRESS'] = ''
+        OPTIONS['HOSTNAME'] = ''
+        OPTIONS['HOST_PORT'] = ''
+        OPTIONS['HOST_FOLDER'] = ''
         options = OPTIONS
     finally:
         return options
 
 
-
 options = load_config()
-OPTIONS = {}
-for option in options:
-    OPTIONS[option] = options[option]
+OPTIONS = {option: options[option] for option in options}
+OPTIONS['HOST_FOLDER'] = ''
 
+col = [
+    [sg.T('Hostname/IP')],
+    [sg.T('Host Port')],
+    [sg.T('Host Folder')],
+]
 
+col2 = [
+    [sg.Input(OPTIONS['HOSTNAME'],size=(20, 1), enable_events=True, k='HOSTNAME')],
+    [sg.Input(OPTIONS['HOST_PORT'], size=(20, 1), enable_events=True, k='HOST_PORT')],
+    [sg.Input(OPTIONS['HOST_FOLDER'], size=(20, 1), enable_events=True, k='HOST_FOLDER')]
+]
 
 
 def open_options():
     general_options = [
         [sg.T('General Options')],
-        [sg.T('Username for Chat:'), sg.Input(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME')],
-        [sg.Checkbox('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'], key='RANDOMIZE',
-        tooltip='When enabled, randomizes the order of image slideshows', enable_events=True)],
-        [sg.HorizontalSeparator()], 
-        [sg.T('Slideshow Advances:')], 
-        [sg.Radio('Manually', "ADV_METHOD", enable_events=True,
-        default = True if OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL' else False,
-        key='ADV_METHOD_MANUAL')], 
-        [sg.Radio('Every', "ADV_METHOD", enable_events=True, 
-        default = True if OPTIONS['ADV_METHOD'] == 'ADV_METHOD_INCREMENTAL' else False, 
-        key='ADV_METHOD_INCREMENTAL'),
-        sg.Spin(list(range(30)), key='SLIDESHOW_INCREMENT', initial_value=OPTIONS['SLIDESHOW_INCREMENT'],
-        size=(3, 1), pad=(0,None), enable_events=True),
-        sg.T('Seconds', pad=(3,0))],
-        [sg.Radio('AI Controlled', "ADV_METHOD",
-        default = True if OPTIONS['ADV_METHOD'] == 'ADV_METHOD_AI' else False,
-        key='ADV_METHOD_AI', enable_events=True)],
+        [
+            sg.T('Username for Chat:'),
+            sg.Input(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME'),
+        ],
+        [sg.HorizontalSeparator()],
+        [sg.T('Host Options')],
+        [sg.Column(col), sg.Column(col2)],
+        [sg.HorizontalSeparator()],
+        [sg.T('Client Options')],
+        [
+            sg.T('Server Address'),
+            sg.Input(
+                OPTIONS['SERVER_ADDRESS'],
+                size=(20, 1),
+                enable_events=True,
+                k='SERVER_ADDRESS',
+            ),
+        ],
+        [
+            sg.T('Server Port'),
+            sg.Input(
+                OPTIONS['SERVER_PORT'],
+                size=(20, 1),
+                enable_events=True,
+                k='SERVER_PORT',
+            ),
+        ],
+        [sg.HorizontalSeparator()],
+        [
+            sg.Checkbox(
+                'Randomize Slideshow Order',
+                default=OPTIONS['RANDOMIZE'],
+                key='RANDOMIZE',
+                tooltip='When enabled, randomizes the order of image slideshows',
+                enable_events=True,
+            )
+        ],
+        [sg.T('Slideshow Advances:')],
+        [
+            sg.Radio(
+                'Manually',
+                "ADV_METHOD",
+                enable_events=True,
+                default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL',
+                key='ADV_METHOD_MANUAL',
+            )
+        ],
+        [
+            sg.Radio(
+                'Every',
+                "ADV_METHOD",
+                enable_events=True,
+                default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_INCREMENTAL',
+                key='ADV_METHOD_INCREMENTAL',
+            ),
+            sg.Spin(
+                list(range(30)),
+                key='SLIDESHOW_INCREMENT',
+                initial_value=OPTIONS['SLIDESHOW_INCREMENT'],
+                size=(3, 1),
+                pad=(0, None),
+                enable_events=True,
+            ),
+            sg.T('Seconds', pad=(3, 0)),
+        ],
+        [
+            sg.Radio(
+                'AI Controlled',
+                "ADV_METHOD",
+                default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_AI',
+                key='ADV_METHOD_AI',
+                enable_events=True,
+            )
+        ],
         [sg.HorizontalSeparator()],
         [sg.T("Theme Options:")],
-        [sg.T('This window will refresh to preview your chosen theme.\n'
-        'Restart the program to apply your theme to all windows.')],
-        [sg.Listbox(values=sg.theme_list(), default_values=OPTIONS['THEME'],
-        select_mode=LISTBOX_SELECT_MODE_SINGLE, size=(20, 12), key='THEME', enable_events=True)],
+        [
+            sg.T(
+                'This window will refresh to preview your chosen theme.\n'
+                'Restart the program to apply your theme to all windows.'
+            )
+        ],
+        [
+            sg.Listbox(
+                values=sg.theme_list(),
+                default_values=OPTIONS['THEME'],
+                select_mode=sg.LISTBOX_SELECT_MODE_SINGLE,
+                size=(20, 12),
+                key='THEME',
+                enable_events=True,
+            )
+        ],
     ]
 
     domme_options = [

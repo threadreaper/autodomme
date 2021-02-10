@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-from socket import AF_INET, socket, SOCK_STREAM
-from threading import Thread, Lock
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.serialization.base import load_pem_public_key
-import PySimpleGUI as sg
-from options import OPTIONS
+import sys
+from socket import AF_INET, SOCK_STREAM, socket
+from threading import Lock, Thread
 from distutils.util import strtobool
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.serialization.base import \
+    load_pem_public_key
+
+if sys.version_info[0] >= 3:
+    import PySimpleGUI as sg
+else:
+    import PySimpleGUI27 as sg
+
+from options import OPTIONS
 
 
 class Client:
@@ -60,7 +67,6 @@ class Client:
         else:
             self.window['ONLINE_USERS'].update(txt.strip(user), append=False)
 
-        
 
     def decrypt(self, msg):
         plaintext = self.private_key.decrypt(
