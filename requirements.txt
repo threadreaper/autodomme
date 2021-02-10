@@ -1,0 +1,7 @@
+cffi==1.14.4
+cryptography==3.4.4
+Pillow==8.1.0
+pycparser==2.20
+PySide2==5.15.2
+PySimpleGUI==4.34.0
+shiboken2==5.15.2
