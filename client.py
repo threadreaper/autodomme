@@ -21,8 +21,8 @@ class Client:
     """
     for communication with server
     """
-    HOST = "localhost"
-    PORT = 1337
+    HOST = OPTIONS['SERVER_ADDRESS']
+    PORT = OPTIONS['SERVER_PORT']
     ADDR = (HOST, PORT)
     BUFSIZ = 512
     
