@@ -56,7 +56,7 @@ class Server(object):
             accept_thread.start()
         except socket.error as error:
             print("Error....Unable to Set Up Sockets with"
-                "{0}".format(error.strerror))
+                  "{0}".format(error.strerror))
             self.server.close()
 
     def encrypt(self, person, msg):
@@ -82,8 +82,8 @@ class Server(object):
         for person in self.clients:
             client = person.client
             try:
-                msg = self.encrypt(person, '%s %s' % (name, msg))
-                client.send(msg)
+                txt = self.encrypt(person, '%s %s' % (name, msg))
+                client.send(txt)
             except socket.error as error:
                 print("Failed to BroadCast message", error)
 
@@ -106,7 +106,7 @@ class Server(object):
         auth_packet = person.client.recv(512)
         username, password = self.decrypt(auth_packet).split()
         cursor.execute("SELECT salt FROM users WHERE username = ?",
-                        (username,))
+                       (username,))
         salt, = cursor.fetchone()
         key = hashlib.pbkdf2_hmac(
             'sha256', password.encode(), salt, 100000)
@@ -146,9 +146,8 @@ class Server(object):
                         print("Disconnected {0} from server".format(
                             person.name))
                         break
-                    else:
-                        self.start_broadcasting(result, person.name + ": ")
-                        print("{0}: ".format(person.name), result)
+                    self.start_broadcasting(result, person.name + ": ")
+                    print("{0}: ".format(person.name), result)
                 except socket.error as error:
                     print("Error...Failed to Broadcast Message", error)
         else:
@@ -167,8 +166,8 @@ class Server(object):
                 (request_socket, client_addr) = self.server.accept()
                 client_key = request_socket.recv(833)
                 client_key = serialization.load_pem_public_key(client_key)
-                person = Person(client_addr, request_socket, client_key)
                 if isinstance(client_key, rsa.RSAPublicKey):
+                    person = Person(client_addr, request_socket, client_key)
                     print(
                         "Got a connection request from...{0}".format(
                             client_addr))
@@ -177,7 +176,7 @@ class Server(object):
                     handler.start()
                     request_socket.send(self.public_key)
                 else:
-                    person.client.close()
+                    request_socket.close()
                     print("Connection rejected - malformed public key")
                     break
             except socket.error as error:

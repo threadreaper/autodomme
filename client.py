@@ -13,6 +13,7 @@ import PySimpleGUI as sG
 
 from options import OPTIONS
 
+
 class Client:
     """
     for communication with server
@@ -165,7 +166,7 @@ class Client:
             if event in ['Cancel', sG.WIN_CLOSED]:
                 login.close()
                 return False
-            elif event == 'Submit':                    
+            elif event == 'Submit':
                 username = login['USERNAME'].get()
                 password = login['PASSWORD'].get()
                 if OPTIONS['SAVE_CREDENTIALS']:

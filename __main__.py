@@ -128,7 +128,7 @@ while True:
         window['INPUT'].update('')
     elif 'HOTKEY_' in event:
         if window.find_element_with_focus() != window['INPUT']:
-            client.send_message(event)
+            client.send_message(OPTIONS[event])
             window['INPUT'].update('')
     elif event == "Options Menu":
         opts = open_options()
@@ -153,8 +153,8 @@ while True:
                 old = [opts, window]
                 window = main_window()
                 opts = open_options()
-                for win in old:
-                    win.close()
+                for expired in old:
+                    expired.close()
             else:
                 print(f'Event: {opt_event}')
         opts.close()
