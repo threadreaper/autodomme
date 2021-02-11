@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+"""Server class and methods related to crypto"""
 import binascii
 import hashlib
+import os
 import socket
 import sqlite3
 from threading import Event, Thread
@@ -8,59 +10,57 @@ from threading import Event, Thread
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-
-private_key = rsa.generate_private_key(
-    public_exponent=65537,
-    key_size=4096
-)
-public_key = private_key.public_key()
-public_key = public_key.public_bytes(
-    encoding=serialization.Encoding.PEM,
-    format=serialization.PublicFormat.SubjectPublicKeyInfo
-)
-
-
-socket.setdefaulttimeout(60)
+from options import OPTIONS
 
 
 class Person:
-
+    """Class to hold data about connected clients"""
     def __init__(self, addr, client, key):
         self.addr = addr
         self.client = client
         self.name = None
         self.key = key
 
-    def set_name(self, name, username):
+    def set_name(self, name):
+        """Setter for the name prop on Person"""
         self.name = name
-        conn = sqlite3.connect('teaseai.db')
-        c = conn.cursor()
-        c.execute("UPDATE users SET chat_name=?, online=1 WHERE username = ?", (name, username,))
-        conn.commit()
-        c.close()
-        conn.close()
-    
-    def __repr__(self):
-        return "The client: {0} with IP addr: {1}".format(
-            self.name, self.addr)
-
-
-HOST = "0.0.0.0"
-PORT = 1337
-address = (HOST, PORT)
 
 
 class Server(object):
-
+    """Class for Server object"""
     def __init__(self):
-        self.host = HOST
-        self.port = PORT
+        self.host = OPTIONS['HOSTNAME']
+        self.port = OPTIONS['HOST_PORT']
         self.address = (self.host, self.port)
         self.clients = []
         self.server = None
         self.exit_event = Event()
+        self.private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=4096
+        )
+        pub = self.private_key.public_key()
+        self.public_key = pub.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
+    def set_up_server(self):
+        """Initialize the server."""
+        try:
+            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server.bind(self.address)
+            self.server.listen(5)
+            print("Server Set-Up Successful")
+            accept_thread = Thread(target=self.start_server, daemon=True)
+            accept_thread.start()
+        except socket.error as error:
+            print("Error....Unable to Set Up Sockets with"
+                "{0}".format(error.strerror))
+            self.server.close()
 
     def encrypt(self, person, msg):
+        """Encrypt a message"""
         text = msg.encode('utf8')
         text = person.key.encrypt(
             text,
@@ -84,24 +84,12 @@ class Server(object):
             try:
                 msg = self.encrypt(person, '%s %s' % (name, msg))
                 client.send(msg)
-            except Exception as e:
-                print("Failed to BroadCast message", e)
-
-    def set_up_server(self):
-        try:
-            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server.bind(address)
-            self.server.listen(5)
-            print("Server Set-Up Successful")
-            accept_thread = Thread(target=self.start_server, daemon=True)
-            accept_thread.start()
-        except socket.error as e:
-            print(
-                "Error....Unable to Set Up Sockets with {0}".format(e.strerror))
-            self.server.close()
+            except socket.error as error:
+                print("Failed to BroadCast message", error)
 
     def decrypt(self, msg):
-        plaintext = private_key.decrypt(
+        """Decrypt a message"""
+        plaintext = self.private_key.decrypt(
             msg,
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),
@@ -112,40 +100,39 @@ class Server(object):
         return plaintext.decode()
 
     def login(self, person):
+        """Log a user in to the server"""
         conn = sqlite3.connect('teaseai.db')
-        c = conn.cursor()
+        cursor = conn.cursor()
         auth_packet = person.client.recv(512)
         username, password = self.decrypt(auth_packet).split()
-        pw_hash = (False, True)[len(password) > 15]
-        if not pw_hash:
-            c.execute("SELECT salt FROM users WHERE username = ?", (username,))
-            salt, = c.fetchone()
-            key = hashlib.pbkdf2_hmac(
-                'sha256', password.encode(), salt, 100000)
-            key = binascii.hexlify(key).decode()
-        else:
-            key = password
-        c.execute(
-            "SELECT username FROM users WHERE username = ? AND password = ?", (username, key))
-        user, = c.fetchone()
+        cursor.execute("SELECT salt FROM users WHERE username = ?",
+                        (username,))
+        salt, = cursor.fetchone()
+        key = hashlib.pbkdf2_hmac(
+            'sha256', password.encode(), salt, 100000)
+        key = binascii.hexlify(key).decode()
+        cursor.execute("SELECT username FROM users WHERE username = ?"
+                       "AND password = ?", (username, key))
+        user, = cursor.fetchone()
         if user:
             msg = self.encrypt(person, 'true')
             person.client.send(msg)
             name = person.client.recv(512)
             name = self.decrypt(name)
-            person.set_name(name, username)
+            person.set_name(name)
             message = (f"{name} has joined the chat!")
             self.clients.append(person)
-            self.start_broadcasting(message, "")            
+            self.start_broadcasting(message, "")
             return True
         else:
-            c.close()
+            cursor.close()
             conn.close()
             return False
 
     def client_handler(self, person):
-        client = person.client        
-        if self.login(person):       
+        """Handle communication with the client"""
+        client = person.client
+        if self.login(person):
             while True:
                 try:
                     message = client.recv(512)
@@ -155,55 +142,61 @@ class Server(object):
                         message = (f"{person.name} has left the chat.")
                         self.start_broadcasting(message, "")
                         client.close()
-                        self.clients.remove(person)                        
-                        print("Disconnected {0} from server".format(person.name))
+                        self.clients.remove(person)
+                        print("Disconnected {0} from server".format(
+                            person.name))
                         break
                     else:
                         self.start_broadcasting(result, person.name + ": ")
                         print("{0}: ".format(person.name), result)
-                except Exception as e:
-                    print("Error...Failed to Broadcast Message", e)
+                except socket.error as error:
+                    print("Error...Failed to Broadcast Message", error)
         else:
             msg = self.encrypt(person, 'False')
             client.send(msg)
             client.close()
 
     def start_server(self):
+        """Start the server"""
         while True:
             if self.exit_event.is_set():
                 print('server exit signal received')
                 break
             try:
                 print("Waiting For a Client...")
-                (requestSocket, clientAddr) = self.server.accept()
-                client_key = requestSocket.recv(833)
+                (request_socket, client_addr) = self.server.accept()
+                client_key = request_socket.recv(833)
                 client_key = serialization.load_pem_public_key(client_key)
-                person = Person(clientAddr, requestSocket, client_key)
+                person = Person(client_addr, request_socket, client_key)
                 if isinstance(client_key, rsa.RSAPublicKey):
                     print(
-                        "Got a connection request from...{0}".format(clientAddr))
+                        "Got a connection request from...{0}".format(
+                            client_addr))
                     handler = Thread(target=self.client_handler,
                                      args=(person,), daemon=True)
                     handler.start()
-                    requestSocket.send(public_key)
+                    request_socket.send(self.public_key)
                 else:
                     person.client.close()
                     print("Connection rejected - malformed public key")
                     break
-            except socket.error as e:
+            except socket.error as error:
                 print(
-                    "Error... Failed to send a request to the client {0}".format(e.strerror))
+                    "Error... Failed to send a request"
+                    "to the client {0}".format(error.strerror))
 
-            """     def new_user(self, user: str, password: str):
+    def new_user(self, user: str, password: str):
+        """Create a new user in the local database"""
         conn = sqlite3.connect('teaseai.db')
-        c = conn.cursor()
+        cursor = conn.cursor()
         salt = os.urandom(32)
-        key = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+        key = hashlib.pbkdf2_hmac('sha256', password.encode(),
+                                  salt, 100000)
         key = binascii.hexlify(key).decode()
-        c.execute("INSERT INTO users VALUES (?, ?, ?)", (user, key, salt))
+        cursor.execute("INSERT INTO users VALUES (?, ?, ?)", (user, key, salt))
         conn.commit()
-        c.close()
-        conn.close() """
+        cursor.close()
+        conn.close()
 
 
 if __name__ == '__main__':

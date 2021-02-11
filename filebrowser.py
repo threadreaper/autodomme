@@ -25,8 +25,7 @@ class FileBrowser():
             [
                 sG.B('<<', k='BACK', disabled=(False, True)[
                     self.history is None]),
-                sG.B('^', k='UP', disabled=(False, True)[
-                    self.path in [OPTIONS['HOST_FOLDER'], '/']]),
+                sG.B('^', k='UP', disabled=(False, True)[self.path == '/']),
                 sG.Input(path, size=(40, 1), text_color='#000000',
                          k='PATH', disabled=True),
             ],
@@ -100,8 +99,9 @@ class FileBrowser():
             if event == 'BACK':
                 self._change_path(self.history, self.path)
                 break
-            if event == 'SELECT' and os.path.isdir(values[event][0]):
-                OPTIONS['HOST_FOLDER'] == values[event][0]
+            if event == 'Select':
+                OPTIONS['HOST_FOLDER'] = values['PATH']
+                break
             if os.path.isdir(values[event][0]):
                 self._change_path(values[event][0], self.path)
                 break
@@ -109,6 +109,7 @@ class FileBrowser():
                 self.preview(values[event][0], self.preview_frame)
         self.window.close()
 
+        
 
 if __name__ == "__main__":
     win = FileBrowser(OPTIONS['HOST_FOLDER'], 'DarkAmber')

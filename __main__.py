@@ -5,10 +5,10 @@ import time as t
 
 import PySimpleGUI as sG
 
+from options import open_options, OPTIONS
 from client import Client
 from filebrowser import FileBrowser
-from images import SlideShow
-from options import open_options, OPTIONS
+# from images import SlideShow
 from server import Server
 
 
@@ -90,9 +90,9 @@ def main_window():
 
 window = main_window()
 
-slideshow = SlideShow(OPTIONS['HOST_FOLDER'], window)
+""" slideshow = SlideShow(OPTIONS['HOST_FOLDER'], window)
 if len(slideshow.images) > 0:
-    slideshow.show()
+    slideshow.show() """
 
 server = Server()
 client = Client(window)
@@ -103,10 +103,12 @@ c = conn.cursor()
 
 
 while True:
+    """
     dt = t.time() - time
     if len(slideshow.images) > 0:
         slideshow.update(dt)
     time = t.time()
+    """
     event, values = window.read(timeout=50)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
@@ -129,35 +131,33 @@ while True:
             client.send_message(event)
             window['INPUT'].update('')
     elif event == "Options Menu":
-        sG.set_options(suppress_raise_key_errors=True,
-                       suppress_error_popups=True, suppress_key_guessing=True)
-        options = open_options()
+        opts = open_options()
         while True:
-            opt_event, opt_vals = options.read()
+            opt_event, opt_vals = opts.read()
             if opt_event in ["Exit", sG.WIN_CLOSED]:
                 break
+            if opt_event in OPTIONS.dict.keys():
+                OPTIONS[opt_event] = opt_vals[opt_event]
             if opt_event == 'Browse':
-                browser = FileBrowser(options['HOST_FOLDER'].get(),
+                browser = FileBrowser(opts['HOST_FOLDER'].get(),
                                       OPTIONS['THEME'][3:])
                 browser.show()
-            if window[opt_event] is not None:
-                if isinstance(window[opt_event], sG.Text):
-                    window[opt_event].update(opt_vals[opt_event])
-                elif isinstance(window[opt_event], sG.Button):
-                    window[opt_event].update(
-                        text=f"{options[opt_event].get()}\n\n{opt_event[-1]}")
+                opts['HOST_FOLDER'].update(OPTIONS['HOST_FOLDER'])
+            if 'HOTKEY_' in opt_event:
+                window[opt_event].update(
+                    text=f"{opts[opt_event].get()}\n\n{opt_event[-1]}")
             if 'ADV_METHOD' in opt_event:
                 OPTIONS['ADV_METHOD'] = opt_event
             if opt_event == 'THEME':
                 OPTIONS['THEME'] = opt_vals[opt_event][0]
-                old = [options, window]
+                old = [opts, window]
                 window = main_window()
-                options = open_options()
-                for x in old:
-                    x.close()
+                opts = open_options()
+                for win in old:
+                    win.close()
             else:
                 print(f'Event: {opt_event}')
-        options.close()
+        opts.close()
     elif event != '__TIMEOUT__':
         print(f'Event: {event}')
 

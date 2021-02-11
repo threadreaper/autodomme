@@ -1,51 +1,52 @@
 #!/usr/bin/env python3
 """Load/Save user options and spawn the options window"""
 import os
+import json
 from json.decoder import JSONDecodeError
 import PySimpleGUI as sG
 
 
-def load_defaults():
-    """Load configuration defaults"""
-    return {
-        'THEME': '5. BrownBlue',
-        'HOTKEY_7': 'Safe Word',
-        'HOTKEY_8': 'Yes',
-        'HOTKEY_9': 'No',
-        'HOTKEY_4': 'Stop',
-        'HOTKEY_5': 'Faster',
-        'HOTKEY_6': 'Slower',
-        'HOTKEY_1': 'Greeting',
-        'HOTKEY_2': 'May I cum?',
-        'HOTKEY_3': 'Stroke',
-        'HOTKEY_0': 'O N   T H E   E D G E',
-        'USERNAME': None,
-        'PASSWORD': None,
-        'SAVE_CREDENTIALS': True,
-        'CHAT_NAME': None,
-        'SERVER_PORT': 1337,
-        'SERVER_ADDRESS': None,
-        'HOSTNAME': '0.0.0.0',
-        'HOST_PORT': 1337,
-        'HOST_FOLDER': os.path.expanduser("~"),
-    }
+load_defaults = {
+    'THEME': '5. BrownBlue',
+    'HOTKEY_7': 'Safe Word',
+    'HOTKEY_8': 'Yes',
+    'HOTKEY_9': 'No',
+    'HOTKEY_4': 'Stop',
+    'HOTKEY_5': 'Faster',
+    'HOTKEY_6': 'Slower',
+    'HOTKEY_1': 'Greeting',
+    'HOTKEY_2': 'May I cum?',
+    'HOTKEY_3': 'Stroke',
+    'HOTKEY_0': 'O N   T H E   E D G E',
+    'USERNAME': None,
+    'PASSWORD': None,
+    'SAVE_CREDENTIALS': True,
+    'CHAT_NAME': None,
+    'SERVER_PORT': 1337,
+    'SERVER_ADDRESS': None,
+    'HOSTNAME': '0.0.0.0',
+    'HOST_PORT': 1337,
+    'HOST_FOLDER': os.path.expanduser("~"),
+}
 
 
 def load_options():
     """Load the config file or load defaults"""
-    opts = sG.UserSettings('config.json', os.getcwd(), False)
+    opts = sG.UserSettings('config.json', os.getcwd())
     try:
-        opts.load()
+        with open(opts.full_filename, 'r') as file:
+            opts.dict = json.load(file)
+        return opts
     except (FileNotFoundError, JSONDecodeError):
         sG.popup_ok('Config file missing or invalid.\n'
                     'Using configuration defaults.', modal=True)
-        opts = load_defaults()
-    finally:
-        pass
-    return opts
+        for option in load_defaults:
+            opts[option] = load_defaults[option]
+        return opts
 
 
 OPTIONS = load_options()
+
 
 
 """
@@ -243,4 +244,4 @@ def open_options():
 
     layout = [[sG.TabGroup(tab_group_layout)]]
 
-    return sG.Window("Options", layout, size=(1280, 720))
+    return sG.Window("Options", layout)

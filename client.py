@@ -13,13 +13,12 @@ import PySimpleGUI as sG
 
 from options import OPTIONS
 
-
 class Client:
     """
     for communication with server
     """
     HOST = OPTIONS['SERVER_ADDRESS']
-    PORT = int(OPTIONS['SERVER_PORT'])
+    PORT = OPTIONS['SERVER_PORT']
     ADDR = (HOST, PORT)
     BUFSIZ = 512
 
@@ -166,9 +165,11 @@ class Client:
             if event in ['Cancel', sG.WIN_CLOSED]:
                 login.close()
                 return False
-            elif event == 'Submit':
+            elif event == 'Submit':                    
                 username = login['USERNAME'].get()
                 password = login['PASSWORD'].get()
+                if OPTIONS['SAVE_CREDENTIALS']:
+                    OPTIONS['USERNAME'] = username
                 self.send_message('%s %s' % (username, password))
                 answer = self.decrypt(self.client_socket.recv(512))
                 login.close()
