@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Client class and associated methods"""
+from distutils.util import strtobool
+from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
 from threading import Lock, Thread
-from distutils.util import strtobool
 
+import PySimpleGUI as sG
+from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.serialization.base import \
     load_pem_public_key
-
-import PySimpleGUI as sG
+from PIL import Image, ImageOps
 
 from options import OPTIONS
 
@@ -81,6 +83,11 @@ class Client:
         )
         return plaintext.decode()
 
+    def decrypt_file(self, file, fern_key):
+        """Decrypt a received image file"""
+        fern = Fernet(fern_key)
+        return fern.decrypt(file)
+
     def receive_messages(self):
         """
         receive messages from server
@@ -94,7 +101,25 @@ class Client:
                 msg = self.decrypt(msg)
                 if 'has joined the chat' in msg or 'has left the chat' in msg:
                     self.update_window(msg.split()[0])
-                sG.cprint(msg)
+                if msg.startswith('IMG'):
+                    _, length, key = msg.split(':')
+
+                    img = self.client_socket.recv(512)
+                    while len(img) < int(length):
+                        img += self.client_socket.recv(512)
+
+                    with open('client.png', 'wb') as file:
+                        file.write(img)
+
+                    dec_img = BytesIO(self.decrypt_file(img, key))
+                    image = Image.open(dec_img)
+                    image = ImageOps.pad(image, (980, 780))
+                    with BytesIO() as bio:
+                        image.save(bio, format="PNG")
+                        del image
+                        self.window['IMAGE'].update(data=bio.getvalue())
+                else:
+                    sG.cprint(msg)
                 # make sure memory is safe to access
                 self.lock.acquire()
                 self.messages.append(msg)

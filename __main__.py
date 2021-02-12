@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 """Main application loop for TeaseAI."""
-import sqlite3
-import time as t
-
 import PySimpleGUI as sG
 
 from options import open_options, OPTIONS
 from client import Client
 from filebrowser import FileBrowser
-# from images import SlideShow
 from server import Server
 
 
@@ -31,8 +27,8 @@ def main_window():
         [sG.Multiline("", size=(40, 30), pad=(3, 2), do_not_clear=True,
                       autoscroll=True, write_only=True, auto_refresh=True,
                       disabled=True, reroute_cprint=True, k='CHAT')],
-        [sG.Input('', size=(32, 4), do_not_clear=False, pad=(3, (2, 4)),
-                  k='INPUT'), sG.Submit(size=(5, 1), pad=(1, (1.5)))],
+        [sG.Input('', size=(32, 4), do_not_clear=False, pad=(3, 3),
+                  k='INPUT'), sG.Submit(size=(5, 1), pad=((2, 3), 3))],
         [sG.Button(f"{OPTIONS['HOTKEY_7']}\n\n7", size=(9, 3), k='HOTKEY_7',
                    pad=(4, (5, 2))),
          sG.Button(f"{OPTIONS['HOTKEY_8']}\n\n8", size=(9, 3), k='HOTKEY_8',
@@ -63,17 +59,21 @@ def main_window():
 
     layout = [
         [sG.Menu(main_menu, tearoff=False, pad=(0, 0)),
-         sG.Column(media_player, size=(980, 800),
+         sG.Column(media_player, size=(980, 780),
                    element_justification='center',
                    background_color='#000000', pad=(0, 0)),
-         sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))]
+         sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))],
+        [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
+                      size=(20, 2), pad=(5, (0, 5)), k='STATUS')]
     ]
 
-    win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1280, 800),
+    win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1280, 810),
                     return_keyboard_events=True)
     win.finalize()
     win['INPUT'].expand(expand_y=True)
+    win['STATUS'].expand(True)
     win['INPUT'].update()
+    win['STATUS'].update()
     win.bind('<KP_7>', 'HOTKEY_7')
     win.bind('<KP_8>', 'HOTKEY_8')
     win.bind('<KP_9>', 'HOTKEY_9')
@@ -89,26 +89,10 @@ def main_window():
 
 
 window = main_window()
-
-""" slideshow = SlideShow(OPTIONS['HOST_FOLDER'], window)
-if len(slideshow.images) > 0:
-    slideshow.show() """
-
-server = Server()
+server = Server(window['STATUS'])
 client = Client(window)
 
-time = t.time()
-conn = sqlite3.connect('teaseai.db')
-c = conn.cursor()
-
-
 while True:
-    """
-    dt = t.time() - time
-    if len(slideshow.images) > 0:
-        slideshow.update(dt)
-    time = t.time()
-    """
     event, values = window.read(timeout=50)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
@@ -119,10 +103,6 @@ while True:
     elif event == 'Connect to Server':
         client = Client(window)
         client.connect()
-    elif event == 'Right:114' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
-        slideshow.next()
-    elif event == 'Left:113' and OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL':
-        slideshow.back()
     elif event == 'Submit':
         client.send_message(window['INPUT'].get())
         window['INPUT'].update('')

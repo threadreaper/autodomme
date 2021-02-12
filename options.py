@@ -48,13 +48,9 @@ def load_options():
 OPTIONS = load_options()
 
 
-
 """
 OPTIONS['DOMME_NAME'] = 'Domme'
-OPTIONS['SUB_NAME'] = 'Sub'
-OPTIONS['THEME'] = 'DarkAmber'
 OPTIONS['RANDOMIZE'] = False
-OPTIONS['DOMME_IMAGE_DIR'] = os.environ['HOME'] #done
 OPTIONS['ADV_METHOD'] = 'ADV_METHOD_AI'
 OPTIONS['SLIDESHOW_INCREMENT'] = 5
 """
