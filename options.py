@@ -34,7 +34,7 @@ def load_options():
     """Load the config file or load defaults"""
     opts = sG.UserSettings('config.json', os.getcwd())
     try:
-        with open(opts.full_filename, 'r') as file:
+        with open('config.json', 'r') as file:
             opts.dict = json.load(file)
         return opts
     except (FileNotFoundError, JSONDecodeError):

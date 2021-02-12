@@ -109,7 +109,6 @@ class FileBrowser():
                 self.preview(values[event][0], self.preview_frame)
         self.window.close()
 
-        
 
 if __name__ == "__main__":
     win = FileBrowser(OPTIONS['HOST_FOLDER'], 'DarkAmber')

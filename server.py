@@ -32,15 +32,13 @@ class Person:
 
 
 class Server(object):
-    """Class for Server object - accepts an instance of a status
-    bar as an argument, and directs any output there"""
+    """Class for server object"""
 
-    def __init__(self, status_bar):
+    def __init__(self):
         self.host = OPTIONS['HOSTNAME']
         self.port = OPTIONS['HOST_PORT']
         self.address = (self.host, self.port)
         self.images = OPTIONS['HOST_FOLDER']
-        self.status_bar = status_bar
         self.clients = []
         self.server = None
         self.exit_event = Event()
@@ -129,22 +127,51 @@ class Server(object):
         )
         return plaintext.decode()
 
+    def _validate_auth_packet(self, auth_packet, person):
+        """Make sure user/pass are both populated"""
+        try:
+            username, password = self.decrypt(auth_packet).split()
+        except ValueError:
+            msg = self.encrypt(person.key,
+                               'User/Pass must not be empty.')
+            person.client.send(msg)
+            auth_packet = person.client.recv(512)
+            username, password = self._validate_auth_packet(auth_packet,
+                                                            person)
+        return username, password
+
     def login(self, person):
         """Log a user in to the server"""
         con = sqlite3.connect('teaseai.db')
         auth_packet = person.client.recv(512)
-        username, password = self.decrypt(auth_packet).split()
-        for row in con.execute("SELECT salt FROM users WHERE username = ?",
-                               (username,)):
-            salt, = row
-        key = hashlib.pbkdf2_hmac(
-            'sha256', password.encode(), salt, 100000)
-        key = binascii.hexlify(key).decode()
-        for row in con.execute("SELECT username FROM users WHERE username = ?"
-                               "AND password = ?", (username, key)):
-            user, = row
-        if user:
-            msg = self.encrypt(person.key, 'true')
+        username, password = self._validate_auth_packet(auth_packet, person)
+        salt, user = '', ''
+        while salt == '':
+            for row in con.execute("SELECT salt FROM users WHERE username = ?",
+                                   (username,)):
+                salt = row[0]
+            if salt == '':
+                msg = self.encrypt(person.key, 'Invalid User')
+                person.client.send(msg)
+                auth_packet = person.client.recv(512)
+                username, password = self._validate_auth_packet(auth_packet,
+                                                                person)
+        while user == '':
+            key = hashlib.pbkdf2_hmac('sha256', password.encode(),
+                                      salt, 100000)
+            key = binascii.hexlify(key).decode()
+            for row in con.execute(
+                "SELECT username FROM users WHERE username = ? AND password = ?",
+                    (username, key)):
+                user = row[0]
+            if user == '':
+                msg = self.encrypt(person.key, 'Invalid Password')
+                person.client.send(msg)
+                auth_packet = person.client.recv(512)
+                username, password = self._validate_auth_packet(auth_packet,
+                                                                person)
+        if user != '':
+            msg = self.encrypt(person.key, 'True')
             person.client.send(msg)
             name = person.client.recv(512)
             name = self.decrypt(name)
@@ -154,10 +181,8 @@ class Server(object):
             self.clients.append(person)
             self.lock.release()
             self.broadcast(message, "")
-            return True
-        else:
             con.close()
-            return False
+            return True
 
     def client_handler(self, person):
         """Handle communication with the client"""
@@ -186,9 +211,8 @@ class Server(object):
                     print(
                         "Error...Failed to Broadcast Message", error)
         else:
-            msg = self.encrypt(person.key, 'False')
+            msg = self.encrypt(person.key, 'Something went wrong')
             client.send(msg)
-            client.close()
 
     def start_server(self):
         """Start the server"""

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Client class and associated methods"""
-from distutils.util import strtobool
 from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
 from threading import Lock, Thread
@@ -54,9 +53,13 @@ class Client:
         self.client_socket.send(self.public_key)
         self.srv_key = load_pem_public_key(self.client_socket.recv(833))
         if isinstance(self.srv_key, rsa.RSAPublicKey):
-            if not self.authenticate():
-                print('Authentication failure - connection rejected')
-            else:
+            authenticated = self.authenticate('')
+            while authenticated != 'True':
+                if not authenticated:
+                    break
+                else:
+                    authenticated = self.authenticate(authenticated)
+            if authenticated:
                 receive_thread = Thread(target=self.receive_messages)
                 receive_thread.start()
                 self.send_message(self.chat_name)
@@ -169,16 +172,16 @@ class Client:
         """Disconnect from chat server."""
         self.send_message("/quit")
 
-    def authenticate(self):
+    def authenticate(self, last):
         """Authenticate on the server."""
         login_layout = [
-            [sG.T('', size=(20, 1), k='oops', visible=False)],
-            [sG.T("Username:"), sG.Input(default_text=self.username,
-                                         size=(20, 1), k='USERNAME')],
-            [sG.T("Password:"), sG.Input(default_text=self.password,
-                                         size=(20, 1), password_char='*',
-                                         k='PASSWORD')],
-            [sG.Checkbox('Save credentials',
+            [sG.T(last, size=(30, 1), visible=(False, True)[last != ''])],
+            [sG.T("Username:", size=(15, 1)),
+             sG.Input(default_text=self.username, size=(20, 1), k='USERNAME')],
+            [sG.T("Password:", size=(15, 1)),
+             sG.Input(default_text=self.password, size=(20, 1), k='PASSWORD',
+                      password_char='*')],
+            [sG.Checkbox('Save credentials', 
                          default=OPTIONS['SAVE_CREDENTIALS'],
                          k='CREDENTIALS')],
             [sG.Submit(), sG.Cancel()]
@@ -199,4 +202,4 @@ class Client:
                 self.send_message('%s %s' % (username, password))
                 answer = self.decrypt(self.client_socket.recv(512))
                 login.close()
-                return [strtobool(answer)]
+                return answer

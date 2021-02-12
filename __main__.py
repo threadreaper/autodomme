@@ -89,7 +89,7 @@ def main_window():
 
 
 window = main_window()
-server = Server(window['STATUS'])
+server = Server()
 client = Client(window)
 
 while True:
