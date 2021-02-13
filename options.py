@@ -72,17 +72,19 @@ def open_options():
     """Open the options menu"""
     sG.theme(OPTIONS['THEME'][3:])
 
-    general_options = [
+    gen_col_one = [
         [sG.T('General Options')],
         [sG.T('Username for Chat:')],
-        [sG.In(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME')],
+        [sG.In(OPTIONS['CHAT_NAME'], enable_events=True, size=(20, 1),
+               k='CHAT_NAME')],
         [sG.HorizontalSeparator()],
         [sG.T('Client Options')],
-        [sG.T('Server Address'),
+        [sG.T('Server Address', size=(20, 1)),
          sG.In(OPTIONS['SERVER_ADDRESS'], size=(20, 1), enable_events=True,
                k='SERVER_ADDRESS')],
-        [sG.T('Server Port'), sG.In(OPTIONS['SERVER_PORT'], size=(20, 1),
-                                    enable_events=True, k='SERVER_PORT')],
+        [sG.T('Server Port', size=(20, 1)),
+         sG.In(OPTIONS['SERVER_PORT'], size=(20, 1), enable_events=True,
+               k='SERVER_PORT')],
         [sG.HorizontalSeparator()],
         [sG.Checkbox('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'],
                      k='RANDOMIZE', tooltip='When enabled, randomizes the \
@@ -109,6 +111,19 @@ def open_options():
                             enumerate(sG.theme_list())], enable_events=True,
                     select_mode=sG.LISTBOX_SELECT_MODE_BROWSE, size=(20, 12),
                     default_values=OPTIONS['THEME'], k='THEME',)],
+    ]
+
+    gen_col_two = [
+        [sG.T('Boss key:')],
+        [sG.In('ESCAPE', disabled=True, k='BOSS_KEY', size=(20, 1)),
+         sG.B('Bind', k='BIND_BOSS_KEY', disabled=True)],
+        [sG.Sizer(0, 500)]
+    ]
+
+    general_options = [
+        [sG.Col(gen_col_one),
+         sG.VerticalSeparator(),
+         sG.Col(gen_col_two)]
     ]
 
     domme_options = [

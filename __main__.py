@@ -86,16 +86,8 @@ def main_window():
     win['INPUT'].update()
     win['SERVER_STATUS'].update()
     win['HOST_FOLDER'].update()
-    win.bind('<KP_7>', 'HOTKEY_7')
-    win.bind('<KP_8>', 'HOTKEY_8')
-    win.bind('<KP_9>', 'HOTKEY_9')
-    win.bind('<KP_4>', 'HOTKEY_4')
-    win.bind('<KP_5>', 'HOTKEY_5')
-    win.bind('<KP_6>', 'HOTKEY_6')
-    win.bind('<KP_1>', 'HOTKEY_1')
-    win.bind('<KP_2>', 'HOTKEY_2')
-    win.bind('<KP_3>', 'HOTKEY_3')
-    win.bind('<KP_0>', 'HOTKEY_0')
+    for i in range(9):
+        win.bind('<KP_%s>' % i, 'HOTKEY_%s' % i)
     win.bind('<Escape>', 'HIDE')
     win.finalize()
 
@@ -105,7 +97,6 @@ def main_window():
 window = main_window()
 server = Server()
 client = Client(window)
-
 
 while True:
     event, values = window.read(timeout=50)
