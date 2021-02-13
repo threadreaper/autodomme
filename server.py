@@ -329,7 +329,7 @@ class Server(object):
                 conn.close()
                 break
             try:
-                self.queue.put("Waiting For a Client...")
+                self.queue.put("Server running...")
                 (request_socket, client_addr) = self.server.accept()
                 client_key = request_socket.recv(833)
                 client_key = serialization.load_pem_public_key(client_key)

@@ -6,6 +6,7 @@ from options import open_options, OPTIONS
 from client import Client
 from filebrowser import FileBrowser
 from server import Server
+from threading import Thread
 
 
 def main_window():
@@ -86,7 +87,7 @@ def main_window():
          sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))],
         [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
                       size=(40, 2), pad=(5, (0, 5)), k='SERVER_STATUS'),
-         sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
+         sG.StatusBar('Not connected to any server', relief=sG.RELIEF_RIDGE, font='ANY 11',
                       size=(40, 2), pad=((2, 5), (0, 5)), k='CLIENT_STATUS')]
     ]
 
@@ -111,16 +112,30 @@ def main_window():
     win.bind('<KP_2>', 'HOTKEY_2')
     win.bind('<KP_3>', 'HOTKEY_3')
     win.bind('<KP_0>', 'HOTKEY_0')
+    win.bind('<Escape>', 'HIDE')
     win.finalize()
 
     return win
 
 
 window = main_window()
+tray_menu = [
+    ['Exit'], 
+    ['Unhide']
+]
+tray = sG.SystemTray(tray_menu, filename='icons/forward.png')
+
 server = Server()
 client = Client(window)
+HIDDEN = False
 
 while True:
+    tray_event = tray.read(timeout=10)[0]
+    if tray_event in ['Exit', sG.WIN_CLOSED]:
+        window.close()
+        break
+    elif 'U' in tray_event and HIDDEN:
+        window.un_hide()
     event, values = window.read(timeout=50)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
@@ -134,6 +149,13 @@ while True:
     elif event == 'Submit':
         client.send_message(window['INPUT'].get())
         window['INPUT'].update('')
+    elif event == 'HIDE':
+        if not HIDDEN:
+            window.hide()
+            HIDDEN = True
+        else:
+            window.un_hide()
+            HIDDEN = False
     elif 'Browse' in event:
         host_browse = FileBrowser(server.path,
                                   OPTIONS['THEME'][3:])

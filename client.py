@@ -56,9 +56,10 @@ class Client:
             while authenticated != 'True':
                 if not authenticated:
                     break
-                else:
-                    authenticated = self.authenticate(authenticated)
+                authenticated = self.authenticate(authenticated)
             if authenticated:
+                self.window['CLIENT_STATUS'].update(
+                    'Connected to server at: %s' % OPTIONS['SERVER_ADDRESS'])
                 receive_thread = Thread(target=self.receive_messages)
                 receive_thread.start()
                 self.send_message(self.chat_name)
@@ -147,10 +148,12 @@ class Client:
                 ))
             self.client_socket.send(text)
             if msg == "quit":
+                self.window['CLIENT_STATUS'].update('Not connected to any \
+                                                    server.')
                 self.client_socket.close()
         except OSError as error:
             self.client_socket = socket(AF_INET, SOCK_STREAM)
-            self.client_socket.connect(self.ADDR)
+            self.client_socket.connect(self.address)
             print(error)
 
     def get_messages(self):
