@@ -2,9 +2,9 @@
 """Main application loop for TeaseAI."""
 import PySimpleGUI as sG
 
-from options import open_options, OPTIONS
 from client import Client
 from filebrowser import FileBrowser
+from options import OPTIONS, open_options
 from server import Server
 from solitaire import MyGame, arcade
 
@@ -19,28 +19,14 @@ def main_window():
         ['&Options', ['Options Menu']]
     ]
 
-    hot_keys = [
-        [sG.Button(f"{OPTIONS['HOTKEY_7']}\n7", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_7', pad=(4, (15, 2))),
-         sG.Button(f"{OPTIONS['HOTKEY_8']}\n8", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_8', pad=(5, (15, 2))),
-         sG.Button(f"{OPTIONS['HOTKEY_9']}\n9", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_9', pad=(4, (15, 2)))],
-        [sG.Button(f"{OPTIONS['HOTKEY_4']}\n4", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_4', pad=(4, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_5']}\n5", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_5', pad=(5, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_6']}\n6", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_6', pad=(4, 2))],
-        [sG.Button(f"{OPTIONS['HOTKEY_1']}\n1", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_1', pad=(4, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_2']}\n2", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_2', pad=(5, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_3']}\n3", size=(9, 2), font='ANY 9 bold',
-                   k='HOTKEY_3', pad=(4, 2))],
-        [sG.Button(f"{OPTIONS['HOTKEY_0']}\n0", size=(38, 3),
-                   font='ANY 9 bold', k='HOTKEY_0', pad=(3, 5))],
-    ]
+    keys = []
+    for i in [7, 8, 9, 4, 5, 6, 1, 2, 3, 0]:
+        button = sG.B(f"{OPTIONS['HOTKEY_%s' % i]}\n{i}",
+                      size=(38 if i == 0 else 9, 3 if i == 0 else 2),
+                      k='HOTKEY_%s' % i, font='ANY 9 bold',
+                      pad=(3, (15, 3) if i in [7, 8, 9] else 3))
+        keys.append(button)
+    keys[:] = [keys[0:3]] + [keys[3:6]] + [keys[6:9]] + [keys[9:]]
 
     media_player_panel = [
         [sG.T('Host Folder:', size=(40, 1), pad=(5, 10))],
@@ -54,7 +40,7 @@ def main_window():
         [sG.Sizer(0, 100)]
     ]
 
-    tab1_layout = hot_keys
+    tab1_layout = keys
     tab2_layout = media_player_panel
 
     tab_group_layout = [[sG.Tab('Hot Keys', tab1_layout),

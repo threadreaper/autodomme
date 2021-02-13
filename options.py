@@ -56,11 +56,16 @@ OPTIONS['SLIDESHOW_INCREMENT'] = 5
 """
 
 
-def calc_vscroll(theme):
+def calc_vscroll():
+    """
+    Calculates and returns the vertical scroll offset for the theme listbox.
+
+    :return: The vertical scroll offset
+    :rtype: float
+    """
     offset = OPTIONS['THEME'].split('.')[0]
     themes = len(sG.theme_list())
     return round(int(offset) / themes, 2) - .05
- 
 
 
 def open_options():
@@ -69,143 +74,65 @@ def open_options():
 
     general_options = [
         [sG.T('General Options')],
-        [
-            sG.T('Username for Chat:'),
-            sG.Input(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME'),
-        ],
-
+        [sG.T('Username for Chat:')],
+        [sG.In(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME')],
         [sG.HorizontalSeparator()],
         [sG.T('Client Options')],
-        [
-            sG.T('Server Address'),
-            sG.Input(
-                OPTIONS['SERVER_ADDRESS'],
-                size=(20, 1),
-                enable_events=True,
-                k='SERVER_ADDRESS',
-            ),
-        ],
-        [
-            sG.T('Server Port'),
-            sG.Input(
-                OPTIONS['SERVER_PORT'],
-                size=(20, 1),
-                enable_events=True,
-                k='SERVER_PORT',
-            ),
-        ],
+        [sG.T('Server Address'),
+         sG.In(OPTIONS['SERVER_ADDRESS'], size=(20, 1), enable_events=True,
+               k='SERVER_ADDRESS')],
+        [sG.T('Server Port'), sG.In(OPTIONS['SERVER_PORT'], size=(20, 1),
+                                    enable_events=True, k='SERVER_PORT')],
         [sG.HorizontalSeparator()],
-        [
-            sG.Checkbox(
-                'Randomize Slideshow Order',
-                default=OPTIONS['RANDOMIZE'],
-                key='RANDOMIZE',
-                tooltip='When enabled, randomizes the order'
-                ' of image slideshows',
-                enable_events=True,
-            )
-        ],
+        [sG.Checkbox('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'],
+                     k='RANDOMIZE', tooltip='When enabled, randomizes the \
+                     order of image slideshows', enable_events=True)],
         [sG.T('Slideshow Advances:')],
-        [
-            sG.Radio(
-                'Manually',
-                "ADV_METHOD",
-                enable_events=True,
-                default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL',
-                key='ADV_METHOD_MANUAL',
-            )
-        ],
-        [
-            sG.Radio(
-                'Every',
-                "ADV_METHOD",
-                enable_events=True,
-                default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_INCREMENTAL',
-                key='ADV_METHOD_INCREMENTAL',
-            ),
-            sG.Spin(
-                list(range(30)),
-                key='SLIDESHOW_INCREMENT',
-                initial_value=OPTIONS['SLIDESHOW_INCREMENT'],
-                size=(3, 1),
-                pad=(0, None),
-                enable_events=True,
-            ),
-            sG.T('Seconds', pad=(3, 0)),
-        ],
-        [
-            sG.Radio(
-                'AI Controlled',
-                "ADV_METHOD",
-                default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_AI',
-                key='ADV_METHOD_AI',
-                enable_events=True,
-            )
-        ],
+        [sG.Radio('Manually', "ADV_METHOD", enable_events=True,
+                  default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL',
+                  k='ADV_METHOD_MANUAL')],
+        [sG.Radio('Every', "ADV_METHOD", enable_events=True,
+                  default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_INCREMENTAL',
+                  k='ADV_METHOD_INCREMENTAL'),
+         sG.Spin(list(range(30)), k='SLIDESHOW_INCREMENT', pad=(0, None),
+                 initial_value=OPTIONS['SLIDESHOW_INCREMENT'], size=(3, 1),
+                 enable_events=True),
+         sG.T('Seconds', pad=(3, 0))],
+        [sG.Radio('AI Controlled', "ADV_METHOD", k='ADV_METHOD_AI',
+                  default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_AI',
+                  enable_events=True)],
         [sG.HorizontalSeparator()],
         [sG.T("Theme Options:")],
-        [
-            sG.T(
-                'This window will refresh to preview your chosen theme.\n'
-                'Restart the program to apply your theme to all windows.'
-            )
-        ],
-        [
-            sG.Listbox(
-                values=[str(i+1)+'. '+x for i,
-                        x in enumerate(sG.theme_list())],
-                select_mode=sG.LISTBOX_SELECT_MODE_BROWSE,
-                default_values=OPTIONS['THEME'],
-                size=(20, 12), key='THEME', enable_events=True,
-            )
-        ],
+        [sG.T('This window will refresh to preview your chosen theme.\n'
+              'Restart the program to apply your theme to all windows.')],
+        [sG.Listbox(values=[str(i+1)+'. '+x for i, x in
+                            enumerate(sG.theme_list())], enable_events=True,
+                    select_mode=sG.LISTBOX_SELECT_MODE_BROWSE, size=(20, 12),
+                    default_values=OPTIONS['THEME'], k='THEME',)],
     ]
 
     domme_options = [
         [sG.T('Domme Options')],
         [sG.T("Domme's Name:")],
-        [sG.Input(OPTIONS['DOMME_NAME'], size=(20, 1),
-                  key='DOMME_NAME', enable_events=True)],
+        [sG.In(OPTIONS['DOMME_NAME'], size=(20, 1),
+               k='DOMME_NAME', enable_events=True)],
         [sG.T("Domme's Image Directory:")],
-        [sG.Input(OPTIONS['DOMME_IMAGE_DIR'], size=(20, 1),
-                  key='DOMME_IMAGE_DIR', enable_events=True),
+        [sG.In(OPTIONS['DOMME_IMAGE_DIR'], size=(20, 1),
+               k='DOMME_IMAGE_DIR', enable_events=True),
          sG.B('Browse')]
     ]
 
     hotkey_options = [
         [sG.T('Hotkeys')],
         [sG.T('Configure number pad hotkeys for "lazy chat"')],
-        [sG.T('Hotkey 7 ='), sG.Input(OPTIONS['HOTKEY_7'],
-                                      size=(20, 1), k='HOTKEY_7',
-                                      enable_events=True)],
-        [sG.T('Hotkey 8 ='), sG.Input(OPTIONS['HOTKEY_8'],
-                                      size=(20, 1), k='HOTKEY_8',
-                                      enable_events=True)],
-        [sG.T('Hotkey 9 ='), sG.Input(OPTIONS['HOTKEY_9'],
-                                      size=(20, 1), k='HOTKEY_9',
-                                      enable_events=True)],
-        [sG.T('Hotkey 4 ='), sG.Input(OPTIONS['HOTKEY_6'],
-                                      size=(20, 1), k='HOTKEY_4',
-                                      enable_events=True)],
-        [sG.T('Hotkey 5 ='), sG.Input(OPTIONS['HOTKEY_5'],
-                                      size=(20, 1), k='HOTKEY_5',
-                                      enable_events=True)],
-        [sG.T('Hotkey 6 ='), sG.Input(OPTIONS['HOTKEY_4'],
-                                      size=(20, 1), k='HOTKEY_6',
-                                      enable_events=True)],
-        [sG.T('Hotkey 1 ='), sG.Input(OPTIONS['HOTKEY_3'],
-                                      size=(20, 1), k='HOTKEY_1',
-                                      enable_events=True)],
-        [sG.T('Hotkey 2 ='), sG.Input(OPTIONS['HOTKEY_2'],
-                                      size=(20, 1), k='HOTKEY_2',
-                                      enable_events=True)],
-        [sG.T('Hotkey 3 ='), sG.Input(OPTIONS['HOTKEY_1'],
-                                      size=(20, 1), k='HOTKEY_3',
-                                      enable_events=True)],
-        [sG.T('Hotkey 0 ='), sG.Input(OPTIONS['HOTKEY_0'],
-                                      size=(20, 1), k='HOTKEY_0',
-                                      enable_events=True)]
+
     ]
+
+    for i in range(9):
+        key_list = [sG.T('Hotkey %s' % i),
+                    sG.In(OPTIONS['HOTKEY_%s' % i], size=(20, 1),
+                          k='HOTKEY_%s' % i, enable_events=True)]
+        hotkey_options.append(key_list)
 
     col = [
         [sG.T('Hostname/IP', size=(15, 1))],
@@ -214,12 +141,12 @@ def open_options():
     ]
 
     col2 = [
-        [sG.Input(OPTIONS['HOSTNAME'], size=(20, 1),
-                  enable_events=True, k='HOSTNAME')],
-        [sG.Input(OPTIONS['HOST_PORT'], size=(20, 1),
-                  enable_events=True, k='HOST_PORT')],
-        [sG.Input(OPTIONS['HOST_FOLDER'], size=(20, 1),
-                  enable_events=True, k='HOST_FOLDER'),
+        [sG.In(OPTIONS['HOSTNAME'], size=(20, 1),
+               enable_events=True, k='HOSTNAME')],
+        [sG.In(OPTIONS['HOST_PORT'], size=(20, 1),
+               enable_events=True, k='HOST_PORT')],
+        [sG.In(OPTIONS['HOST_FOLDER'], size=(20, 1),
+               enable_events=True, k='HOST_FOLDER'),
          sG.B('Browse', k='Browse0', metadata='folders')]
     ]
     server_options = [
@@ -240,6 +167,6 @@ def open_options():
     layout = [[sG.TabGroup(tab_group_layout)]]
 
     dialog = sG.Window("Options", layout, finalize=True)
-    dialog['THEME'].set_vscroll_position(calc_vscroll(OPTIONS['THEME']))
+    dialog['THEME'].set_vscroll_position(calc_vscroll())
 
     return dialog

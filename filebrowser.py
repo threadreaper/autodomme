@@ -51,7 +51,6 @@ class FileBrowser():
         self.preview_frame = self.window['IMAGE'].get_size()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
 
-
     def _add_folder(self, parent, path):
         """Add a folder to the tree - internal method only."""
 
