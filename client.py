@@ -16,19 +16,18 @@ from options import OPTIONS
 
 
 class Client:
-    """
-    for communication with server
-    """
-    HOST = OPTIONS['SERVER_ADDRESS']
-    PORT = OPTIONS['SERVER_PORT']
-    ADDR = (HOST, PORT)
-    BUFSIZ = 512
-
-    def __init__(self, window):
+    """Client object for communication with server."""
+    
+    def __init__(self, window: sG.Window) -> None:
         """
-        Init object and send name to server
-        :param name: str
+        Initializes the client.
+        
+        :param window: Instance of Window used for updating the GUI.
+        :window type: sG.Window
         """
+        
+        self.address = (OPTIONS['SERVER_ADDRESS'], OPTIONS['SERVER_PORT'])
+        self.buffer = 512
         self.window = window
         self.chat_name = OPTIONS['CHAT_NAME']
         self.username = OPTIONS['USERNAME']
@@ -49,7 +48,7 @@ class Client:
 
     def connect(self):
         """Attempt to connect to a server"""
-        self.client_socket.connect(self.ADDR)
+        self.client_socket.connect(self.address)
         self.client_socket.send(self.public_key)
         self.srv_key = load_pem_public_key(self.client_socket.recv(833))
         if isinstance(self.srv_key, rsa.RSAPublicKey):
@@ -98,7 +97,7 @@ class Client:
         """
         while True:
             try:
-                msg = self.client_socket.recv(512)
+                msg = self.client_socket.recv(self.buffer)
                 if len(msg) == 0:
                     break
                 msg = self.decrypt(msg)
@@ -107,9 +106,9 @@ class Client:
                 if msg.startswith('IMG'):
                     _, length, key = msg.split(':')
 
-                    img = self.client_socket.recv(512)
+                    img = self.client_socket.recv(self.buffer)
                     while len(img) < int(length):
-                        img += self.client_socket.recv(512)
+                        img += self.client_socket.recv(self.buffer)
 
                     with open('client.png', 'wb') as file:
                         file.write(img)
@@ -200,6 +199,6 @@ class Client:
                 if OPTIONS['SAVE_CREDENTIALS']:
                     OPTIONS['USERNAME'] = username
                 self.send_message('%s %s' % (username, password))
-                answer = self.decrypt(self.client_socket.recv(512))
+                answer = self.decrypt(self.client_socket.recv(self.buffer))
                 login.close()
                 return answer

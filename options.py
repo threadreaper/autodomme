@@ -66,7 +66,7 @@ def open_options():
             sG.T('Username for Chat:'),
             sG.Input(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME'),
         ],
-  
+
         [sG.HorizontalSeparator()],
         [sG.T('Client Options')],
         [
@@ -202,21 +202,21 @@ def open_options():
                                       enable_events=True)]
     ]
 
-    col= [
+    col = [
         [sG.T('Hostname/IP', size=(15, 1))],
         [sG.T('Host Port', size=(15, 1))],
-        [sG.T('Host Folder', size=(15, 1), enable_events=True)],
+        [sG.T('Host Folder', size=(15, 1))],
     ]
 
     col2 = [
         [sG.Input(OPTIONS['HOSTNAME'], size=(20, 1),
-                    enable_events=True, k='HOSTNAME')],
+                  enable_events=True, k='HOSTNAME')],
         [sG.Input(OPTIONS['HOST_PORT'], size=(20, 1),
-                    enable_events=True, k='HOST_PORT')],
+                  enable_events=True, k='HOST_PORT')],
         [sG.Input(OPTIONS['HOST_FOLDER'], size=(20, 1),
-                    enable_events=True, k='HOST_FOLDER'),
+                  enable_events=True, k='HOST_FOLDER'),
          sG.B('Browse', k='Browse0', metadata='folders')]
-        ]
+    ]
     server_options = [
         [sG.T('Host Options')],
         [sG.Column(col), sG.Column(col2)],

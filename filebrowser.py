@@ -49,6 +49,8 @@ class FileBrowser():
                                 layout=self.layout, finalize=True)
         self.window['IMAGE'].expand(True, True)
         self.preview_frame = self.window['IMAGE'].get_size()
+        self.window['PATH'].expand(expand_x=True, expand_y=True)
+
 
     def _add_folder(self, parent, path):
         """Add a folder to the tree - internal method only."""
@@ -91,10 +93,9 @@ class FileBrowser():
 
     def show(self):
         """Show the file browser window."""
-        self.window.finalize()
-        self.window['PATH'].expand(expand_x=True, expand_y=True)
         while True:
             event, values = self.window.read()
+            print(event)
             if event in ['Cancel', sG.WIN_CLOSED]:
                 break
             if event == 'UP':
