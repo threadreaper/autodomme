@@ -1,6 +1,4 @@
-"""
-Solitaire clone.
-"""
+"""Solitaire clone."""
 import random
 import arcade
 

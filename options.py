@@ -56,6 +56,13 @@ OPTIONS['SLIDESHOW_INCREMENT'] = 5
 """
 
 
+def calc_vscroll(theme):
+    offset = OPTIONS['THEME'].split('.')[0]
+    themes = len(sG.theme_list())
+    return round(int(offset) / themes, 2) - .05
+ 
+
+
 def open_options():
     """Open the options menu"""
     sG.theme(OPTIONS['THEME'][3:])
@@ -149,9 +156,7 @@ def open_options():
                         x in enumerate(sG.theme_list())],
                 select_mode=sG.LISTBOX_SELECT_MODE_BROWSE,
                 default_values=OPTIONS['THEME'],
-                size=(20, 12),
-                key='THEME',
-                enable_events=True,
+                size=(20, 12), key='THEME', enable_events=True,
             )
         ],
     ]
@@ -234,4 +239,7 @@ def open_options():
 
     layout = [[sG.TabGroup(tab_group_layout)]]
 
-    return sG.Window("Options", layout)
+    dialog = sG.Window("Options", layout, finalize=True)
+    dialog['THEME'].set_vscroll_position(calc_vscroll(OPTIONS['THEME']))
+
+    return dialog
