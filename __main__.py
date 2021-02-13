@@ -15,9 +15,7 @@ def main_window():
     main_menu = [
         ['&File', ['E&xit']],
         ['&Server', ['Start Server', 'Kill Server', 'Connect to Server']],
-        ['&Options', ['Options Menu']],
-        ['&Debug', ['BLANK']],
-        ['&About', ['BLANK']]
+        ['&Options', ['Options Menu']]
     ]
 
     sidebar = [
@@ -64,7 +62,7 @@ def main_window():
                    background_color='#000000', pad=(0, 0)),
          sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))],
         [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
-                      size=(20, 2), pad=(5, (0, 5)), k='STATUS')]
+                      size=(40, 2), pad=(5, (0, 5)), k='STATUS')]
     ]
 
     win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1280, 810),
@@ -118,9 +116,11 @@ while True:
                 break
             if opt_event in OPTIONS.dict.keys():
                 OPTIONS[opt_event] = opt_vals[opt_event]
-            if opt_event == 'Browse':
+            if str(opt_event).startswith('Browse'):
+                filetype = opts[opt_event].metadata
                 browser = FileBrowser(opts['HOST_FOLDER'].get(),
-                                      OPTIONS['THEME'][3:])
+                                      OPTIONS['THEME'][3:],
+                                      filetype)
                 browser.show()
                 opts['HOST_FOLDER'].update(OPTIONS['HOST_FOLDER'])
             if 'HOTKEY_' in opt_event:
@@ -140,6 +140,9 @@ while True:
         opts.close()
     elif event != '__TIMEOUT__':
         print(f'Event: {event}')
+    if not server.queue.empty():
+        status = server.queue.get(False)
+        window['STATUS'].update(status)
 
 
 server.exit_event.set()

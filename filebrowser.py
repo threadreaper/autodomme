@@ -12,12 +12,13 @@ from options import OPTIONS
 class FileBrowser():
     """Class for custom file browser widget."""
 
-    def __init__(self, path, theme, history=None):
+    def __init__(self, path, theme, filetype=None, history=None):
         """Args- path: full path to folder to launch the file browser in."""
         self.theme = theme
         sG.theme(self.theme)
         self.history = history
         self.path = path
+        self.filetype = filetype
         self.treedata = sG.TreeData()
         self._add_folder('', self.path)
 
@@ -41,18 +42,17 @@ class FileBrowser():
                 ),
                 sG.Image(None, None, '#000000', (400, 400), k='IMAGE')
             ],
-            [sG.Sizer(500, 1), sG.B('Select'), sG.B('Cancel')],
+            [sG.Sizer(650, 1), sG.B('Select'), sG.B('Cancel')],
         ]
 
-        self.window = sG.Window('Browse For a directory',
+        self.window = sG.Window('Browse for %s' % self.filetype,
                                 layout=self.layout, finalize=True)
-        self.window['IMAGE'].expand(expand_x=True, expand_y=True)
+        self.window['IMAGE'].expand(True, True)
         self.preview_frame = self.window['IMAGE'].get_size()
 
     def _add_folder(self, parent, path):
         """Add a folder to the tree - internal method only."""
-        file_icon = 'file.png'
-        folder_icon = 'folder.png'
+
         files = []
         folders = []
         for item in os.listdir(path):
@@ -62,13 +62,17 @@ class FileBrowser():
                     folders.append(item)
                 elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
                     files.append(item)
+        folder_icon = 'folder.png'
         for folder in sorted(folders, key=str.lower):
             fqp = os.path.join(self.path, folder)
             self.treedata.insert(parent, fqp, '  ' + folder, [fqp],
                                  icon=folder_icon)
-        for file in sorted(files):
-            fqp = os.path.join(self.path, file)
-            self.treedata.insert(parent, fqp, '  ' + file, [], icon=file_icon)
+        if self.filetype != 'folders':
+            file_icon = 'file.png'
+            for file in sorted(files):
+                fqp = os.path.join(self.path, file)
+                self.treedata.insert(parent, fqp, '  ' +
+                                     file, [], icon=file_icon)
 
     def _change_path(self, path, history):
         """Change path of the file browser - Internal use only"""

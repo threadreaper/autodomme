@@ -181,7 +181,7 @@ class Client:
             [sG.T("Password:", size=(15, 1)),
              sG.Input(default_text=self.password, size=(20, 1), k='PASSWORD',
                       password_char='*')],
-            [sG.Checkbox('Save credentials', 
+            [sG.Checkbox('Save credentials',
                          default=OPTIONS['SAVE_CREDENTIALS'],
                          k='CREDENTIALS')],
             [sG.Submit(), sG.Cancel()]

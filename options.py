@@ -59,21 +59,6 @@ OPTIONS['SLIDESHOW_INCREMENT'] = 5
 def open_options():
     """Open the options menu"""
     sG.theme(OPTIONS['THEME'][3:])
-    col = [
-        [sG.T('Hostname/IP', size=(15, 1))],
-        [sG.T('Host Port', size=(15, 1))],
-        [sG.T('Host Folder', size=(15, 1), enable_events=True)],
-    ]
-
-    col2 = [
-        [sG.Input(OPTIONS['HOSTNAME'], size=(20, 1),
-                  enable_events=True, k='HOSTNAME')],
-        [sG.Input(OPTIONS['HOST_PORT'], size=(20, 1),
-                  enable_events=True, k='HOST_PORT')],
-        [sG.Input(OPTIONS['HOST_FOLDER'], size=(20, 1),
-                  enable_events=True, k='HOST_FOLDER'),
-         sG.B('Browse')]
-    ]
 
     general_options = [
         [sG.T('General Options')],
@@ -81,9 +66,7 @@ def open_options():
             sG.T('Username for Chat:'),
             sG.Input(OPTIONS['CHAT_NAME'], enable_events=True, k='CHAT_NAME'),
         ],
-        [sG.HorizontalSeparator()],
-        [sG.T('Host Options')],
-        [sG.Column(col), sG.Column(col2)],
+  
         [sG.HorizontalSeparator()],
         [sG.T('Client Options')],
         [
@@ -184,13 +167,6 @@ def open_options():
          sG.B('Browse')]
     ]
 
-    sub_options = [
-        [sG.T('Sub Options')],
-        [sG.T("Sub's Name")],
-        [sG.Input(OPTIONS['SUB_NAME'], size=(20, 1),
-                  key='SUB_NAME', enable_events=True)]
-    ]
-
     hotkey_options = [
         [sG.T('Hotkeys')],
         [sG.T('Configure number pad hotkeys for "lazy chat"')],
@@ -226,17 +202,35 @@ def open_options():
                                       enable_events=True)]
     ]
 
+    col= [
+        [sG.T('Hostname/IP', size=(15, 1))],
+        [sG.T('Host Port', size=(15, 1))],
+        [sG.T('Host Folder', size=(15, 1), enable_events=True)],
+    ]
+
+    col2 = [
+        [sG.Input(OPTIONS['HOSTNAME'], size=(20, 1),
+                    enable_events=True, k='HOSTNAME')],
+        [sG.Input(OPTIONS['HOST_PORT'], size=(20, 1),
+                    enable_events=True, k='HOST_PORT')],
+        [sG.Input(OPTIONS['HOST_FOLDER'], size=(20, 1),
+                    enable_events=True, k='HOST_FOLDER'),
+         sG.B('Browse', k='Browse0', metadata='folders')]
+        ]
+    server_options = [
+        [sG.T('Host Options')],
+        [sG.Column(col), sG.Column(col2)],
+    ]
+
     tab1_layout = general_options
     tab2_layout = domme_options
-    tab3_layout = sub_options
-    tab4_layout = [[sG.T('Script Options')]]
-    tab5_layout = hotkey_options
+    tab3_layout = hotkey_options
+    tab4_layout = server_options
 
     tab_group_layout = [[sG.Tab('General', tab1_layout),
                          sG.Tab('Domme', tab2_layout),
-                         sG.Tab('Sub', tab3_layout),
-                         sG.Tab('Scripts', tab4_layout),
-                         sG.Tab('Hotkeys', tab5_layout)]]
+                         sG.Tab('Hotkeys', tab3_layout),
+                         sG.Tab('Server', tab4_layout)]]
 
     layout = [[sG.TabGroup(tab_group_layout)]]
 
