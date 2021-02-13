@@ -6,7 +6,7 @@ from options import open_options, OPTIONS
 from client import Client
 from filebrowser import FileBrowser
 from server import Server
-from threading import Thread
+from solitaire import MyGame, arcade
 
 
 def main_window():
@@ -20,27 +20,26 @@ def main_window():
     ]
 
     hot_keys = [
-        [sG.Button(f"{OPTIONS['HOTKEY_7']}\n7", size=(9, 2), font='ANY 9 bold', k='HOTKEY_7',
-                   pad=(4, (15, 2))),
-         sG.Button(f"{OPTIONS['HOTKEY_8']}\n8", size=(9, 2), font='ANY 9 bold', k='HOTKEY_8',
-                   pad=(5, (15, 2))),
-         sG.Button(f"{OPTIONS['HOTKEY_9']}\n9", size=(9, 2), font='ANY 9 bold', k='HOTKEY_9',
-                   pad=(4, (15, 2)))],
-        [sG.Button(f"{OPTIONS['HOTKEY_4']}\n4", size=(9, 2), font='ANY 9 bold', k='HOTKEY_4',
-                   pad=(4, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_5']}\n5", size=(9, 2), font='ANY 9 bold', k='HOTKEY_5',
-                   pad=(5, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_6']}\n6", size=(9, 2), font='ANY 9 bold', k='HOTKEY_6',
-                   pad=(4, 2))],
-        [sG.Button(f"{OPTIONS['HOTKEY_1']}\n1", size=(9, 2), font='ANY 9 bold', k='HOTKEY_1',
-                   pad=(4, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_2']}\n2", size=(9, 2), font='ANY 9 bold', k='HOTKEY_2',
-                   pad=(5, 2)),
-         sG.Button(f"{OPTIONS['HOTKEY_3']}\n3", size=(9, 2), font='ANY 9 bold', k='HOTKEY_3',
-                   pad=(4, 2))],
-        [sG.Button(f"{OPTIONS['HOTKEY_0']}\n0", size=(38, 3), font='ANY 9 bold', k='HOTKEY_0',
-                   pad=(3, 5))],
-        [sG.Sizer(0, 10)]
+        [sG.Button(f"{OPTIONS['HOTKEY_7']}\n7", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_7', pad=(4, (15, 2))),
+         sG.Button(f"{OPTIONS['HOTKEY_8']}\n8", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_8', pad=(5, (15, 2))),
+         sG.Button(f"{OPTIONS['HOTKEY_9']}\n9", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_9', pad=(4, (15, 2)))],
+        [sG.Button(f"{OPTIONS['HOTKEY_4']}\n4", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_4', pad=(4, 2)),
+         sG.Button(f"{OPTIONS['HOTKEY_5']}\n5", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_5', pad=(5, 2)),
+         sG.Button(f"{OPTIONS['HOTKEY_6']}\n6", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_6', pad=(4, 2))],
+        [sG.Button(f"{OPTIONS['HOTKEY_1']}\n1", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_1', pad=(4, 2)),
+         sG.Button(f"{OPTIONS['HOTKEY_2']}\n2", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_2', pad=(5, 2)),
+         sG.Button(f"{OPTIONS['HOTKEY_3']}\n3", size=(9, 2), font='ANY 9 bold',
+                   k='HOTKEY_3', pad=(4, 2))],
+        [sG.Button(f"{OPTIONS['HOTKEY_0']}\n0", size=(38, 3),
+                   font='ANY 9 bold', k='HOTKEY_0', pad=(3, 5))],
     ]
 
     media_player_panel = [
@@ -48,9 +47,9 @@ def main_window():
         [sG.Input(OPTIONS['HOST_FOLDER'], size=(30, 1), pad=((5, 0), 8),
                   enable_events=True, k='HOST_FOLDER'),
          sG.B('Browse', k='Browse0', metadata='folders', pad=(5, 8))],
-        [sG.B('', k='BACK', image_filename='icons/back.png'), 
+        [sG.B('', k='BACK', image_filename='icons/back.png'),
          sG.B('', k='PAUSE', image_filename='icons/pause.png'),
-         sG.B('', k='PLAY', image_filename='icons/play.png'), 
+         sG.B('', k='PLAY', image_filename='icons/play.png'),
          sG.B('', k='FORWARD', image_filename='icons/forward.png')],
         [sG.Sizer(0, 100)]
     ]
@@ -87,8 +86,9 @@ def main_window():
          sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))],
         [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
                       size=(40, 2), pad=(5, (0, 5)), k='SERVER_STATUS'),
-         sG.StatusBar('Not connected to any server', relief=sG.RELIEF_RIDGE, font='ANY 11',
-                      size=(40, 2), pad=((2, 5), (0, 5)), k='CLIENT_STATUS')]
+         sG.StatusBar('Not connected to any server', relief=sG.RELIEF_RIDGE,
+                      font='ANY 11', size=(40, 2), pad=((2, 5), (0, 5)),
+                      k='CLIENT_STATUS')]
     ]
 
     win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1280, 810),
@@ -119,23 +119,11 @@ def main_window():
 
 
 window = main_window()
-tray_menu = [
-    ['Exit'], 
-    ['Unhide']
-]
-tray = sG.SystemTray(tray_menu, filename='icons/forward.png')
-
 server = Server()
 client = Client(window)
-HIDDEN = False
+
 
 while True:
-    tray_event = tray.read(timeout=10)[0]
-    if tray_event in ['Exit', sG.WIN_CLOSED]:
-        window.close()
-        break
-    elif 'U' in tray_event and HIDDEN:
-        window.un_hide()
     event, values = window.read(timeout=50)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
@@ -150,12 +138,12 @@ while True:
         client.send_message(window['INPUT'].get())
         window['INPUT'].update('')
     elif event == 'HIDE':
-        if not HIDDEN:
-            window.hide()
-            HIDDEN = True
-        else:
-            window.un_hide()
-            HIDDEN = False
+        x, y = window.current_location()
+        window.hide()
+        solitaire = MyGame(window)
+        solitaire.setup()
+        solitaire.set_location(x, y)
+        arcade.run()
     elif 'Browse' in event:
         host_browse = FileBrowser(server.path,
                                   OPTIONS['THEME'][3:])
