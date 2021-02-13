@@ -58,8 +58,6 @@ def main_window():
         [sG.TabGroup(tab_group_layout, k='TABS')]
     ]
 
-    # ----- Full layout -----
-
     media_player = [
         [sG.Image(None, k='IMAGE', pad=(0, 0))]
     ]
