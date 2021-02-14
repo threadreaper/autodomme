@@ -55,7 +55,6 @@ OPTIONS['ADV_METHOD'] = 'ADV_METHOD_AI'
 OPTIONS['SLIDESHOW_INCREMENT'] = 5
 """
 
-
 def calc_vscroll():
     """
     Calculates and returns the vertical scroll offset for the theme listbox.

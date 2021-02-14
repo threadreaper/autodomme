@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
 """TeaseAI server class"""
-import binascii
-import hashlib
 import io
 import os
 import socket
 import sqlite3
 from queue import SimpleQueue
-from threading import Event, Lock, Thread
+from threading import Lock, Thread
 from typing import Any
 
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from options import OPTIONS
+from crypto import get_key_pair, encrypt, decrypt, hash_password, encrypt_file
 
 conn = sqlite3.connect('teaseai.db')
 
@@ -78,16 +76,7 @@ class Server(object):
         conn.execute('UPDATE options SET folder = ?', (self.path, ))
         self.clients = []
         self.server = None
-        self.exit_event = Event()
-        self.private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=4096
-        )
-        self.pub = self.private_key.public_key()
-        self.public_key = self.pub.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+        self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
         self.queue = SimpleQueue()
 
@@ -133,26 +122,6 @@ class Server(object):
         conn.execute("UPDATE options SET setting = ? WHERE name = ?",
                      (setting, opt))
 
-    def _encrypt(self, enc_key: rsa.RSAPublicKey, msg: str) -> bytes:
-        """
-        Encrypt a chat message and return the encrypted string.
-
-        :param enc_key: Encryption key to use for encryption
-        :type enc_key: :class:`rsa.RSAPublicKey`
-        :param msg: Message to encrypt
-        :type msg: string
-        :return: Encrypted string
-        :rtype: bytes
-        """
-        text = msg.encode('utf8')
-        return enc_key.encrypt(
-            text,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            ))
-
     def broadcast(self, msg: str, name: str) -> None:
         """
         Encrypts and broadcasts a chat message to all connected clients.
@@ -164,30 +133,11 @@ class Server(object):
         """
         for person in self.clients:
             client = person.client
-            txt = self._encrypt(person.key, '%s %s' % (name, msg))
+            txt = encrypt(person.key, '%s %s' % (name, msg))
             try:
                 client.send(txt)
             except socket.error as error:
                 self.queue.put("Failed to BroadCast message - %s" % error)
-
-    def _decrypt(self, msg: bytes) -> str:
-        """
-        Decrypts a message and returns the plain text.
-
-        :param msg: Message to decrypt
-        :type msg: bytes
-        :return: The decrypted message
-        :rtype: str
-        """
-        plaintext = self.private_key.decrypt(
-            msg,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        )
-        return plaintext.decode()
 
     def _validate_auth_packet(self, auth_packet: bytes,
                               person: Person) -> tuple[str, str]:
@@ -205,9 +155,9 @@ class Server(object):
         :rtype: tuple
         """
         try:
-            username, password = self._decrypt(auth_packet).split()
+            username, password = decrypt(self.private_key, auth_packet).split()
         except ValueError:
-            msg = self._encrypt(person.key,
+            msg = encrypt(person.key,
                                 'User/Pass must not be empty.')
             person.client.send(msg)
             auth_packet = person.client.recv(512)
@@ -226,10 +176,10 @@ class Server(object):
         :rtype: bool
         """
         if self._authenticate(person):
-            msg = self._encrypt(person.key, 'True')
+            msg = encrypt(person.key, 'True')
             person.client.send(msg)
             name = person.client.recv(512)
-            name = self._decrypt(name)
+            name = decrypt(self.private_key, name)
             person.set_name(name)
             message = (f"{name} has joined the chat!")
             self.client_lock.acquire()
@@ -253,7 +203,7 @@ class Server(object):
         for client in self.clients:
             msg += '%s:' % client.name
         msg += 'END'
-        msg = self._encrypt(person.key, msg)
+        msg = encrypt(person.key, msg)
         person.client.send(msg)
 
     def _authenticate(self, person):
@@ -274,40 +224,26 @@ class Server(object):
                                    (username,)):
                 salt = row[0]
             if salt == '':
-                msg = self._encrypt(person.key, 'Invalid User')
+                msg = encrypt(person.key, 'Invalid User')
                 person.client.send(msg)
                 auth_packet = person.client.recv(512)
                 username, password = self._validate_auth_packet(auth_packet,
                                                                 person)
         user = False
         while not user:
-            key = self._hash_password(password, salt)
+            key = hash_password(password, salt)
             for row in con.execute(
                     "SELECT username FROM users WHERE username = ? AND \
                     password = ?", (username, key)):
                 user = row[0]
             if not user:
-                msg = self._encrypt(person.key, 'Invalid Password')
+                msg = encrypt(person.key, 'Invalid Password')
                 person.client.send(msg)
                 auth_packet = person.client.recv(512)
                 username, password = self._validate_auth_packet(auth_packet,
                                                                 person)
         con.close()
         return True
-
-    def _hash_password(self, password: str, salt: bytes) -> str:
-        """
-        Hashes a password using the original salt stored in the database and
-        returns the hash.
-
-        :param password: The submitted password to check.
-        :type password: str
-        :param salt: The original salt used to hash the user's password.
-        :type salt: bytes
-        """
-        key = hashlib.pbkdf2_hmac('sha256', password.encode(),
-                                  salt, 100000)
-        return binascii.hexlify(key).decode()
 
     def _client_handler(self, person: Person) -> None:
         """
@@ -319,10 +255,7 @@ class Server(object):
         client = person.client
         if self._login(person):
             while True:
-                if self.exit_event.is_set():
-                    self.queue.put('Server thread exiting.')
-                    break
-                msg = self._decrypt(client.recv(512))
+                msg = decrypt(self.private_key, client.recv(512))
                 self.queue.put("Received Message: {0}".format(msg))
                 if msg.startswith('FILE:'):
                     path = msg.split(':')
@@ -338,16 +271,12 @@ class Server(object):
                 else:
                     self.broadcast(msg, person.name + ": ")
         else:
-            msg = self._encrypt(person.key, 'Something went wrong')
+            msg = encrypt(person.key, 'Something went wrong')
             client.send(msg)
 
     def _start_server(self) -> None:
         """Starts the server and handles incoming client connections."""
         while True:
-            if self.exit_event.is_set():
-                self.queue.put('Server thread exiting.')
-                conn.close()
-                break
             try:
                 self.queue.put("Server running...")
                 (request_socket, client_addr) = self.server.accept()
@@ -381,27 +310,8 @@ class Server(object):
         :type password: str
         """
         salt = os.urandom(32)
-        key = hashlib.pbkdf2_hmac('sha256', password.encode(),
-                                  salt, 100000)
-        key = binascii.hexlify(key).decode()
+        key = hash_password(password, salt)
         conn.execute("INSERT INTO users VALUES (?, ?, ?)", (user, key, salt))
-
-    def _encrypt_file(self, filename: str) -> tuple[bytes, str, str]:
-        """
-        Encrypts a file and returns the encrypted file, it's size in bytes and
-        the symmetric key used to encrypt it.
-
-        :param filename: /path/to/file
-        :type filename: path or filename
-        :returns: Encrypted file, size in bytes, symmetric key
-        :rtype: tuple[bytes, str, str]
-        """
-        with open(filename, 'rb') as file:
-            file_data = file.read()
-        f_key = Fernet.generate_key()
-        fern = Fernet(f_key)
-        out_file = fern.encrypt(file_data)
-        return out_file, str(len(out_file)), f_key.decode()
 
     def _send_file(self, person, enc_file, length, key):
         """
@@ -416,7 +326,7 @@ class Server(object):
         :param key: The Fernet key used to encrypt the file.
         :type key: str
         """
-        msg = self._encrypt(person.key, 'IMG:%s:%s' % (length, key))
+        msg = encrypt(person.key, 'IMG:%s:%s' % (length, key))
         try:
             person.client.send(msg)
         except socket.error as error:
@@ -435,7 +345,7 @@ class Server(object):
         :param image: /path/to/image
         :type image: str
         """
-        enc_file, length, key = self._encrypt_file(image)
+        enc_file, length, key = encrypt_file(image)
 
         self.client_lock.acquire()
         for person in self.clients:
@@ -451,7 +361,7 @@ class Server(object):
         :param file: /path/to/file
         :type file: str
         """
-        enc_file, length, key = self._encrypt_file(file)
+        enc_file, length, key = encrypt_file(file)
         self._send_file(person, enc_file, length, key)
 
 
