@@ -8,11 +8,10 @@ from queue import SimpleQueue
 from threading import Lock, Thread
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from options import OPTIONS
-from crypto import get_key_pair, encrypt, decrypt, hash_password, encrypt_file
+from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password, encrypt_file
 
 conn = sqlite3.connect('teaseai.db')
 
@@ -281,7 +280,7 @@ class Server(object):
                 self.queue.put("Server running...")
                 (request_socket, client_addr) = self.server.accept()
                 client_key = request_socket.recv(833)
-                client_key = serialization.load_pem_public_key(client_key)
+                client_key = load_pem(client_key)
                 if isinstance(client_key, rsa.RSAPublicKey):
                     person = Person(client_addr, request_socket, client_key)
                     self.queue.put(

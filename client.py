@@ -5,13 +5,12 @@ from socket import AF_INET, SOCK_STREAM, socket
 from threading import Thread
 
 import PySimpleGUI as sG
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from cryptography.hazmat.primitives.serialization.base import \
-    load_pem_public_key
+from cryptography.hazmat.primitives.asymmetric import rsa
+
 from PIL import Image, ImageOps
 from functools import lru_cache
+
+from crypto import get_key_pair, load_pem, encrypt, decrypt, encrypt_file, decrypt_file
 
 from options import OPTIONS
 
@@ -42,16 +41,8 @@ class Client:
         self.chat_name = OPTIONS['CHAT_NAME']
         self.username = OPTIONS['USERNAME']
         self.password = OPTIONS['PASSWORD']
-        self.private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=4096
-        )
-        pub = self.private_key.public_key()
-        self.public_key = pub.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        self.srv_key = None
+        self.private_key, self.public_key = get_key_pair()
+        self.srv_key = rsa.RSAPublicKey
         self.client_socket = socket(AF_INET, SOCK_STREAM)
         self.messages = []
         self.session = None
@@ -61,7 +52,7 @@ class Client:
         """Attempt to connect to a server"""
         self.client_socket.connect(self.address)
         self.client_socket.send(self.public_key)
-        self.srv_key = load_pem_public_key(self.client_socket.recv(833))
+        self.srv_key = load_pem(self.client_socket.recv(833))
         if isinstance(self.srv_key, rsa.RSAPublicKey):
             authenticated = self.authenticate('')
             while authenticated != 'True':
@@ -82,23 +73,6 @@ class Client:
         self.window['ONLINE_USERS'].update('', append=False)
         for user in self.session.online_users:
             self.window['ONLINE_USERS'].update('%s\n' % user, append=True)
-
-    def decrypt(self, msg):
-        """Decrypt a transmission from the server"""
-        plaintext = self.private_key.decrypt(
-            msg,
-            padding.OAEP(
-                mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                algorithm=hashes.SHA256(),
-                label=None
-            )
-        )
-        return plaintext.decode()
-
-    def decrypt_file(self, file, fern_key):
-        """Decrypt a received image file"""
-        fern = Fernet(fern_key)
-        return fern.decrypt(file)
 
     def _set_session_vars(self, msg):
         """
@@ -125,7 +99,7 @@ class Client:
                 msg = self.client_socket.recv(self.buffer)
                 if len(msg) == 0:
                     break
-                msg = self.decrypt(msg)
+                msg = decrypt(self.private_key, msg)
                 if msg.startswith('PATH'):
                     self._set_session_vars(msg)
                 elif msg.endswith('has joined the chat!'):
@@ -150,7 +124,7 @@ class Client:
         img = self.client_socket.recv(self.buffer)
         while len(img) < int(length):
             img += self.client_socket.recv(self.buffer)
-        dec_img = BytesIO(self.decrypt_file(img, key))
+        dec_img = BytesIO(decrypt_file(img, key))
         image = Image.open(dec_img)
         image = ImageOps.pad(image, (980, 780))
         return image
@@ -177,15 +151,8 @@ class Client:
         :return: None
         """
         try:
-            text = msg.encode('utf8')
-            text = self.srv_key.encrypt(
-                text,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None
-                ))
-            self.client_socket.send(text)
+            txt = encrypt(self.srv_key, msg)
+            self.client_socket.send(txt)
             if msg == "/quit":
                 self.window['CLIENT_STATUS'].update('Not connected.')
                 self.client_socket.close()
@@ -226,6 +193,7 @@ class Client:
                 if OPTIONS['SAVE_CREDENTIALS']:
                     OPTIONS['USERNAME'] = username
                 self.send_message('%s %s' % (username, password))
-                answer = self.decrypt(self.client_socket.recv(self.buffer))
+                answer = decrypt(self.private_key,
+                                 self.client_socket.recv(self.buffer))
                 login.close()
                 return answer

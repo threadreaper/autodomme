@@ -80,3 +80,13 @@ def encrypt_file(filename: str) -> tuple[bytes, str, str]:
     fern = Fernet(f_key)
     out_file = fern.encrypt(file_data)
     return out_file, str(len(out_file)), f_key.decode()
+
+
+def decrypt_file(file, fern_key):
+    """Decrypt a received file"""
+    return Fernet(fern_key).decrypt(file)
+
+
+def load_pem(pub_key: bytes) -> rsa.RSAPublicKey:
+    """Serializes and returns an RSA public key"""
+    return serialization.load_pem_public_key(pub_key)
