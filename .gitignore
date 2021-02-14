@@ -1,4 +1,6 @@
 __pycache__
 .vscode
-teaseai.db
+.mypy_cache
+tease
 config.json
+
