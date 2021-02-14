@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from PIL import Image, ImageOps
 from functools import lru_cache
 
-from crypto import get_key_pair, load_pem, encrypt, decrypt, encrypt_file, decrypt_file
+from crypto import get_key_pair, load_pem, encrypt, decrypt, decrypt_file
 
 from options import OPTIONS
 

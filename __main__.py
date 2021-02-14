@@ -108,8 +108,6 @@ while True:
         break
     elif event == 'Start Server':
         server.set_up_server()
-    elif event == 'Kill Server':
-        server.exit_event.set()
     elif event == 'Connect to Server':
         client = Client(window)
         client.connect()
@@ -168,5 +166,4 @@ while True:
         window['SERVER_STATUS'].update(status)
 
 
-server.exit_event.set()
 window.close()

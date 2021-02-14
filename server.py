@@ -11,7 +11,8 @@ from typing import Any
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from options import OPTIONS
-from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password, encrypt_file
+from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
+    encrypt_file
 
 conn = sqlite3.connect('teaseai.db')
 
@@ -156,8 +157,7 @@ class Server(object):
         try:
             username, password = decrypt(self.private_key, auth_packet).split()
         except ValueError:
-            msg = encrypt(person.key,
-                                'User/Pass must not be empty.')
+            msg = encrypt(person.key, 'User/Pass must not be empty.')
             person.client.send(msg)
             auth_packet = person.client.recv(512)
             username, password = self._validate_auth_packet(auth_packet,
