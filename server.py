@@ -75,6 +75,7 @@ class Server(object):
         self.port = OPTIONS['HOST_PORT']
         self.address = (self.host, self.port)
         self.path = OPTIONS['HOST_FOLDER']
+        conn.execute('UPDATE options SET folder = ?', (self.path, ))
         self.clients = []
         self.server = None
         self.exit_event = Event()
@@ -137,7 +138,7 @@ class Server(object):
         Encrypt a chat message and return the encrypted string.
 
         :param enc_key: Encryption key to use for encryption
-        :type enc_key: rsa.RSAPublicKey
+        :type enc_key: :class:`rsa.RSAPublicKey`
         :param msg: Message to encrypt
         :type msg: string
         :return: Encrypted string
@@ -151,23 +152,6 @@ class Server(object):
                 algorithm=hashes.SHA256(),
                 label=None
             ))
-
-    def _encrypt_file(self, filename: str) -> tuple[bytes, int, bytes]:
-        """
-        Encrypts a file and returns the encrypted file, it's size in bytes and
-        the symmetric key used to encrypt it.
-
-        :param filename: /path/to/file
-        :type filename: path or filename
-        :returns: Encrypted file, size in bytes, symmetric key
-        :rtype: tuple[bytes, int, bytes]
-        """
-        with open(filename, 'rb') as file:
-            file_data = file.read()
-        f_key = Fernet.generate_key()
-        fern = Fernet(f_key)
-        out_file = fern.encrypt(file_data)
-        return out_file, len(out_file), f_key
 
     def broadcast(self, msg: str, name: str) -> None:
         """
@@ -215,8 +199,8 @@ class Server(object):
         :param auth_packet: 512 bytes of encrypted data read from a socket
         containing a client's username and password
         :type auth_packet: bytes
-        :param person: An instance of the Person class
-        :param type: Person
+        :param person: An instance of the `Person` class
+        :type person: :class:`Person`
         :returns: Username and password
         :rtype: tuple
         """
@@ -237,40 +221,11 @@ class Server(object):
 
         :param person: The person object of the client attempting to
         authenticate
-        :person type: Person
+        :type person: :class:`Person`
         :returns: True on success, False otherwise
         :rtype: bool
         """
-        con = sqlite3.connect('teaseai.db')
-        auth_packet = person.client.recv(512)
-        username, password = self._validate_auth_packet(auth_packet, person)
-        salt, user = '', ''
-        while salt == '':
-            for row in con.execute("SELECT salt FROM users WHERE username = ?",
-                                   (username,)):
-                salt = row[0]
-            if salt == '':
-                msg = self._encrypt(person.key, 'Invalid User')
-                person.client.send(msg)
-                auth_packet = person.client.recv(512)
-                username, password = self._validate_auth_packet(auth_packet,
-                                                                person)
-        while user == '':
-            key = hashlib.pbkdf2_hmac('sha256', password.encode(),
-                                      salt, 100000)
-            key = binascii.hexlify(key).decode()
-            for row in con.execute(
-                    "SELECT username FROM users WHERE username = ? AND \
-                    password = ?",
-                    (username, key)):
-                user = row[0]
-            if user == '':
-                msg = self._encrypt(person.key, 'Invalid Password')
-                person.client.send(msg)
-                auth_packet = person.client.recv(512)
-                username, password = self._validate_auth_packet(auth_packet,
-                                                                person)
-        if user != '':
+        if self._authenticate(person):
             msg = self._encrypt(person.key, 'True')
             person.client.send(msg)
             name = person.client.recv(512)
@@ -281,17 +236,85 @@ class Server(object):
             self.clients.append(person)
             self.client_lock.release()
             self.broadcast(message, "")
-            con.close()
+            self._send_session_vars(person)
             return True
         else:
             return False
+
+    def _send_session_vars(self, person: Person) -> None:
+        """
+        Sends a message containing necessary session information for an
+        authenticated user.
+
+        :param person: The authenticated user's `Person` object.
+        :type person: :class:`Person`
+        """
+        msg = 'PATH:%s:ONLINE:' % self.path
+        for client in self.clients:
+            msg += '%s:' % client.name
+        msg += 'END'
+        msg = self._encrypt(person.key, msg)
+        person.client.send(msg)
+
+    def _authenticate(self, person):
+        """
+        Authenticates a user. Returns True on success
+
+        :param person: The client's `Person` object.
+        :type person: :class:`Person`
+        :return: True on success
+        :rtype: bool
+        """
+        con = sqlite3.connect('teaseai.db')
+        auth_packet = person.client.recv(512)
+        username, password = self._validate_auth_packet(auth_packet, person)
+        salt = False
+        while not salt:
+            for row in con.execute("SELECT salt FROM users WHERE username = ?",
+                                   (username,)):
+                salt = row[0]
+            if salt == '':
+                msg = self._encrypt(person.key, 'Invalid User')
+                person.client.send(msg)
+                auth_packet = person.client.recv(512)
+                username, password = self._validate_auth_packet(auth_packet,
+                                                                person)
+        user = False
+        while not user:
+            key = self._hash_password(password, salt)
+            for row in con.execute(
+                    "SELECT username FROM users WHERE username = ? AND \
+                    password = ?", (username, key)):
+                user = row[0]
+            if not user:
+                msg = self._encrypt(person.key, 'Invalid Password')
+                person.client.send(msg)
+                auth_packet = person.client.recv(512)
+                username, password = self._validate_auth_packet(auth_packet,
+                                                                person)
+        con.close()
+        return True
+
+    def _hash_password(self, password: str, salt: bytes) -> str:
+        """
+        Hashes a password using the original salt stored in the database and
+        returns the hash.
+
+        :param password: The submitted password to check.
+        :type password: str
+        :param salt: The original salt used to hash the user's password.
+        :type salt: bytes
+        """
+        key = hashlib.pbkdf2_hmac('sha256', password.encode(),
+                                  salt, 100000)
+        return binascii.hexlify(key).decode()
 
     def _client_handler(self, person: Person) -> None:
         """
         Handles communication with the client
 
         :param person: The person object for the client
-        :person type: Person
+        :type person: :class:`Person`
         """
         client = person.client
         if self._login(person):
@@ -299,24 +322,21 @@ class Server(object):
                 if self.exit_event.is_set():
                     self.queue.put('Server thread exiting.')
                     break
-                try:
-                    message = client.recv(512)
-                    result = self._decrypt(message)
+                msg = self._decrypt(client.recv(512))
+                self.queue.put("Received Message: {0}".format(msg))
+                if msg.startswith('FILE:'):
+                    path = msg.split(':')
+                    self._serve_file(person, path[1])
+                elif msg == "/quit":
+                    message = (f"{person.name} has left the chat.")
+                    self.broadcast(message, "")
+                    client.close()
+                    self.clients.remove(person)
                     self.queue.put(
-                        "Received Message....{0}".format(result))
-                    if result == "/quit":
-                        message = (f"{person.name} has left the chat.")
-                        self.broadcast(message, "")
-                        client.close()
-                        self.clients.remove(person)
-                        self.queue.put(
-                            "Disconnected {0} from server".format(person.name))
-                        break
-                    self.broadcast(result, person.name + ": ")
-                    self.queue.put("{0}: ".format(person.name) + result)
-                except socket.error as error:
-                    self.queue.put(
-                        "Error...Failed to Broadcast Message - %s" % error)
+                        "Disconnected {0} from server".format(person.name))
+                    break
+                else:
+                    self.broadcast(msg, person.name + ": ")
         else:
             msg = self._encrypt(person.key, 'Something went wrong')
             client.send(msg)
@@ -356,15 +376,57 @@ class Server(object):
         Creates a new user in the local database
 
         :param user: The username to create
-        :user type: str
+        :type user: str
         :param password: The user's password
-        :password type: str
+        :type password: str
         """
         salt = os.urandom(32)
         key = hashlib.pbkdf2_hmac('sha256', password.encode(),
                                   salt, 100000)
         key = binascii.hexlify(key).decode()
         conn.execute("INSERT INTO users VALUES (?, ?, ?)", (user, key, salt))
+
+    def _encrypt_file(self, filename: str) -> tuple[bytes, str, str]:
+        """
+        Encrypts a file and returns the encrypted file, it's size in bytes and
+        the symmetric key used to encrypt it.
+
+        :param filename: /path/to/file
+        :type filename: path or filename
+        :returns: Encrypted file, size in bytes, symmetric key
+        :rtype: tuple[bytes, str, str]
+        """
+        with open(filename, 'rb') as file:
+            file_data = file.read()
+        f_key = Fernet.generate_key()
+        fern = Fernet(f_key)
+        out_file = fern.encrypt(file_data)
+        return out_file, str(len(out_file)), f_key.decode()
+
+    def _send_file(self, person, enc_file, length, key):
+        """
+        Sends a file to a connected client.
+
+        :param person: The client's `Person` object.
+        :type person: :class:`Person`
+        :param enc_file: The encrypted file to send.
+        :type file: bytes
+        :param length: The length of the file to send.
+        :type length: str
+        :param key: The Fernet key used to encrypt the file.
+        :type key: str
+        """
+        msg = self._encrypt(person.key, 'IMG:%s:%s' % (length, key))
+        try:
+            person.client.send(msg)
+        except socket.error as error:
+            self.queue.put("Failed to BroadCast message %s" % error)
+
+        with io.BytesIO(enc_file) as file:
+            chunk = file.read(512)
+            while chunk:
+                person.client.send(chunk)
+                chunk = file.read(512)
 
     def broadcast_image(self, image: str) -> None:
         """
@@ -373,30 +435,24 @@ class Server(object):
         :param image: /path/to/image
         :type image: str
         """
-        with open(image, 'rb') as file:
-            file_data = file.read()
-        f_key = Fernet.generate_key()
-        fern = Fernet(f_key)
-        enc_file = fern.encrypt(file_data)
+        enc_file, length, key = self._encrypt_file(image)
 
         self.client_lock.acquire()
         for person in self.clients:
-            client = person.client
-            msg = self._encrypt(person.key, 'IMG:%s:%s' %
-                                (str(len(enc_file)), f_key.decode()))
-            try:
-                client.send(msg)
-            except socket.error as error:
-                self.queue.put("Failed to BroadCast message %s" % error)
-
-        with io.BytesIO(enc_file) as file:
-            for person in self.clients:
-                client = person.client
-                chunk = file.read(512)
-                while chunk:
-                    client.send(chunk)
-                    chunk = file.read(512)
+            self._send_file(person, enc_file, length, key)
         self.client_lock.release()
+
+    def _serve_file(self, person: Person, file: str) -> None:
+        """
+        Answer a client's request to retrieve a file from the server
+
+        :param person: An instance of the client's `Person` object.
+        :type person: :class:`Person`
+        :param file: /path/to/file
+        :type file: str
+        """
+        enc_file, length, key = self._encrypt_file(file)
+        self._send_file(person, enc_file, length, key)
 
 
 if __name__ == '__main__':

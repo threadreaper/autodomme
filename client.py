@@ -2,7 +2,7 @@
 """Client class and associated methods"""
 from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
-from threading import Lock, Thread
+from threading import Thread
 
 import PySimpleGUI as sG
 from cryptography.fernet import Fernet
@@ -11,21 +11,24 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.serialization.base import \
     load_pem_public_key
 from PIL import Image, ImageOps
+from functools import lru_cache
 
+
+from session import Session
 from options import OPTIONS
 
 
 class Client:
     """Client object for communication with server."""
-    
+
     def __init__(self, window: sG.Window) -> None:
         """
         Initializes the client.
-        
+
         :param window: Instance of Window used for updating the GUI.
         :window type: sG.Window
         """
-        
+
         self.address = (OPTIONS['SERVER_ADDRESS'], OPTIONS['SERVER_PORT'])
         self.buffer = 512
         self.window = window
@@ -44,7 +47,8 @@ class Client:
         self.srv_key = None
         self.client_socket = socket(AF_INET, SOCK_STREAM)
         self.messages = []
-        self.lock = Lock()
+        self.session = None
+        self.session = Session()
 
     def connect(self):
         """Attempt to connect to a server"""
@@ -66,13 +70,11 @@ class Client:
         else:
             print('Key handshake failure - connection rejected')
 
-    def update_window(self, user):
+    def update_window(self):
         """Add user to online users list"""
-        txt = self.window['ONLINE_USERS'].get()
-        if f"{user}\n" not in txt:
-            self.window['ONLINE_USERS'].update(f'{user}\n', append=True)
-        else:
-            self.window['ONLINE_USERS'].update(txt.strip(user), append=False)
+        self.window['ONLINE_USERS'].update('', append=False)
+        for user in self.session.online_users:
+            self.window['ONLINE_USERS'].update('%s\n' % user, append=True)
 
     def decrypt(self, msg):
         """Decrypt a transmission from the server"""
@@ -91,6 +93,21 @@ class Client:
         fern = Fernet(fern_key)
         return fern.decrypt(file)
 
+    def _set_session_vars(self, msg):
+        """
+        Sets session variables sent by the server.
+
+        :param msg: A message packet from the server containing session
+        variables.
+        :type msg: str
+        """
+        chunks = msg.split(':')
+        self.session.srv_folder = chunks[1]
+        for chunk in chunks[3:]:
+            if chunk != 'END':
+                self.session.online_users.append(chunk)
+        self.update_window()
+
     def receive_messages(self):
         """
         receive messages from server
@@ -102,34 +119,49 @@ class Client:
                 if len(msg) == 0:
                     break
                 msg = self.decrypt(msg)
-                if 'has joined the chat' in msg or 'has left the chat' in msg:
-                    self.update_window(msg.split()[0])
-                if msg.startswith('IMG'):
-                    _, length, key = msg.split(':')
-
-                    img = self.client_socket.recv(self.buffer)
-                    while len(img) < int(length):
-                        img += self.client_socket.recv(self.buffer)
-
-                    with open('client.png', 'wb') as file:
-                        file.write(img)
-
-                    dec_img = BytesIO(self.decrypt_file(img, key))
-                    image = Image.open(dec_img)
-                    image = ImageOps.pad(image, (980, 780))
-                    with BytesIO() as bio:
-                        image.save(bio, format="PNG")
-                        del image
-                        self.window['IMAGE'].update(data=bio.getvalue())
+                if msg.startswith('PATH'):
+                    self._set_session_vars(msg)
+                elif msg.endswith('has joined the chat!'):
+                    sG.cprint(msg)
+                    if msg.split()[0] != OPTIONS['CHAT_NAME']:
+                        self.session.online_users.append(msg.split()[0])
+                        self.update_window()
+                elif msg.endswith('has left the chat.'):
+                    sG.cprint(msg)
+                    self.session.online_users.remove(msg.split()[0])
+                    self.update_window()
+                elif msg.startswith('IMG'):
+                    self._get_file(msg)
                 else:
                     sG.cprint(msg)
-                # make sure memory is safe to access
-                self.lock.acquire()
-                self.messages.append(msg)
-                self.lock.release()
             except OSError as error:
-                print('[EXCPETION]', error)
+                print('[EXCEPTION]', error)
                 break
+
+    def _get_file(self, msg):
+        _, length, key = msg.split(':')
+        img = self.client_socket.recv(self.buffer)
+        while len(img) < int(length):
+            img += self.client_socket.recv(self.buffer)
+        dec_img = BytesIO(self.decrypt_file(img, key))
+        image = Image.open(dec_img)
+        image = ImageOps.pad(image, (980, 780))
+        return image
+
+    @lru_cache
+    def _request_file(self, filename: str):
+        """
+        Request a file from the server.  Takes a path to file on the server
+        and returns the file.
+
+        :param filename: /path/to/file
+        :type filename: str
+        :returns: The file requested from the server.
+        :rtype: bytes
+        """
+        self.send_message('FILE:%s' % filename)
+        msg = self.client_socket.recv(self.buffer)
+        return self._get_file(msg)
 
     def send_message(self, msg):
         """
@@ -147,28 +179,13 @@ class Client:
                     label=None
                 ))
             self.client_socket.send(text)
-            if msg == "quit":
-                self.window['CLIENT_STATUS'].update('Not connected to any \
-                                                    server.')
+            if msg == "/quit":
+                self.window['CLIENT_STATUS'].update('Not connected.')
                 self.client_socket.close()
         except OSError as error:
             self.client_socket = socket(AF_INET, SOCK_STREAM)
             self.client_socket.connect(self.address)
             print(error)
-
-    def get_messages(self):
-        """
-        :returns a list of str messages
-        :return: list[str]
-        """
-        messages_copy = self.messages[:]
-
-        # make sure memory is safe to access
-        self.lock.acquire()
-        self.messages = []
-        self.lock.release()
-
-        return messages_copy
 
     def disconnect(self):
         """Disconnect from chat server."""
