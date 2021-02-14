@@ -42,9 +42,13 @@ def main_window():
 
     tab1_layout = keys
     tab2_layout = media_player_panel
+    tab3_layout = [
+        [sG.T('Work In Progress!')]
+    ]
 
     tab_group_layout = [[sG.Tab('Hot Keys', tab1_layout),
-                         sG.Tab('Media', tab2_layout)]]
+                         sG.Tab('My Media', tab2_layout),
+                         sG.Tab('Server Media', tab3_layout)]]
 
     sidebar = [
         [sG.T(" Online Users:", pad=(3, 2))],
@@ -120,7 +124,7 @@ while True:
         solitaire.set_location(x, y)
         arcade.run()
     elif 'Browse' in event:
-        host_browse = FileBrowser(server.path,
+        host_browse = FileBrowser(OPTIONS['HOST_FOLDER'],
                                   OPTIONS['THEME'][3:])
         host_browse.show()
     elif 'HOTKEY_' in event:

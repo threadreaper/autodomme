@@ -13,9 +13,16 @@ from cryptography.hazmat.primitives.serialization.base import \
 from PIL import Image, ImageOps
 from functools import lru_cache
 
-
-from session import Session
 from options import OPTIONS
+
+
+class Session:
+    """Holds session variables while connected to a server."""
+
+    def __init__(self):
+
+        self.srv_folder = ''
+        self.online_users = []
 
 
 class Client:
