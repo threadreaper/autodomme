@@ -70,7 +70,7 @@ def calc_vscroll():
 
 def open_options():
     """Open the options menu"""
-    sG.theme(OPTIONS['THEME'][3:])
+    sG.theme(OPTIONS['THEME'].split()[1])
 
     gen_col_one = [
         [sG.T('General Options')],

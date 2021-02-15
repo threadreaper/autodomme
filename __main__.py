@@ -12,7 +12,7 @@ import time as t
 
 def main_window():
     """Construct a main program window"""
-    sG.theme(OPTIONS['THEME'][3:])
+    sG.theme(OPTIONS['THEME'].split()[1])
 
     main_menu = [
         ['&File', ['E&xit']],
@@ -87,10 +87,6 @@ def main_window():
     win['SERVER_STATUS'].expand(True)
     win['HOST_FOLDER'].expand(True, True)
     win['Browse0'].expand(True)
-    win['Browse0'].update()
-    win['INPUT'].update()
-    win['SERVER_STATUS'].update()
-    win['HOST_FOLDER'].update()
     for i in range(9):
         win.bind('<KP_%s>' % i, 'HOTKEY_%s' % i)
     win.bind('<Escape>', 'HIDE')
@@ -132,7 +128,7 @@ while True:
             client.send_message(window['INPUT'].get())
             window['INPUT'].update('')
         else:
-            window['INPUT'].update('Error: Not connected to server')
+            sG.cprint('Error: Not connected to server')
     elif event == 'HIDE':
         x, y = window.current_location()
         window.hide()
@@ -175,6 +171,7 @@ while True:
                 OPTIONS['THEME'] = opt_vals[opt_event][0]
                 old = [opts, window]
                 window = main_window()
+                client.window = window
                 opts = open_options()
                 for expired in old:
                     expired.close()
