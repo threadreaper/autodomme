@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TeaseAI server class"""
+"""Classes related to the TeaseAI server"""
 import io
 import os
 import socket
@@ -14,58 +14,6 @@ from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
     encrypt_file
 
 conn = sqlite3.connect('teaseai.db')
-
-
-class SlideShow():
-    """Class for an Image slideshow"""
-    def __init__(self, folder, server):
-        self.directory = folder
-        files = os.listdir(folder)
-        self.images = [os.path.join(folder, f) for f in files
-                       if os.path.isfile(os.path.join(folder, f)) and
-                       f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff',
-                                           'bmp'))]
-
-        self.index = 0
-        self.time = 0
-        self.server = server
-        self.started = False
-
-    def start(self):
-        self.started = True
-
-    def stop(self):
-        self.started = False
-
-    def show(self):
-        """Start the slideshow"""
-        image = os.path.join(self.directory, self.images[self.index])
-        self.server.broadcast_image(image)
-
-    def next(self):
-        """Advance the slideshow to the next slide"""
-        if self.index + 1 == len(self.images):
-            self.index = 0
-        else:
-            self.index += 1
-        self.show()
-
-    def back(self):
-        """Display the slide before the current slide"""
-        self.index -= 1
-        self.show()
-
-    def update(self, delta):
-        """Update the slideshow"""
-        if self.started is True:
-            if OPTIONS['HOST_FOLDER'] != self.directory:
-                self.directory = OPTIONS['HOST_FOLDER']
-                self.images = os.listdir(self.directory)
-                self.show()
-            self.time += delta
-            if self.time > 5000:
-                self.time = 0
-                self.next()
 
 
 class Person:
@@ -109,6 +57,7 @@ class Server(object):
 
         Public methods:
         - set_up_server(): Starts the server.
+        - kill(): Shuts down the server.
         - opt_get(): Retrieves the value of a server option.
         - opt_set(): Sets the value of a server option.
         - broadcast(): Sends a chat message to all connected clients.
@@ -117,7 +66,6 @@ class Server(object):
         - queue.empty(): Returns True if the queue is empty, False
         otherwise.
         - queue.get(): Returns the oldest server status message.
-        - exit_event.set(): Signal server to shut down.
         """
 
         self.host = self.opt_get('hostname')
@@ -430,6 +378,81 @@ class Server(object):
         """
         enc_file, length, key = encrypt_file(file)
         self._send_file(person, enc_file, length, key)
+
+
+class SlideShow(object):
+    """Class for an Image slideshow"""
+
+    def __init__(self, folder: str, server: Server) -> None:
+        """
+        Initializes the slideshow.
+
+        Public methods:
+        - start(): Start the slideshow.
+        - stop(): Stop the slideshow.
+        - next(): Display the next slide.
+        - back(): Display the previous slide.
+        - update(): Update the slideshow.
+
+        :param folder: /path/to/folder containing slideshow images.
+        :type folder: string
+        :param server: An instance of the `Server` object.
+        :type server: :class: `Server`
+        """
+        self.directory = folder
+        files = os.listdir(folder)
+        self.images = [os.path.join(folder, f) for f in files
+                       if os.path.isfile(os.path.join(folder, f)) and
+                       f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff',
+                                           'bmp'))]
+
+        self.index = 0
+        self.time = 0
+        self.server = server
+        self.started = False
+
+    def start(self) -> None:
+        """Start the slideshow."""
+        self.started = True
+
+    def stop(self) -> None:
+        """Stop the slideshow."""
+        self.started = False
+
+    def _show(self) -> None:
+        """Display the current slideshow image."""
+        image = os.path.join(self.directory, self.images[self.index])
+        self.server.broadcast_image(image)
+
+    def next(self) -> None:
+        """Advance the slideshow to the next slide."""
+        if self.index + 1 == len(self.images):
+            self.index = 0
+        else:
+            self.index += 1
+        self._show()
+
+    def back(self) -> None:
+        """Display the previous slide."""
+        self.index -= 1
+        self._show()
+
+    def update(self, delta: float) -> None:
+        """
+        Update the slideshow.
+
+        :param delta: The amount of time since the last update.
+        :type delta: float
+        """
+        if self.started is True:
+            if OPTIONS['HOST_FOLDER'] != self.directory:
+                self.directory = OPTIONS['HOST_FOLDER']
+                self.images = os.listdir(self.directory)
+                self._show()
+            self.time += delta
+            if self.time > 5000:
+                self.time = 0
+                self.next()
 
 
 if __name__ == '__main__':
