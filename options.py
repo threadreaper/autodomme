@@ -27,6 +27,7 @@ load_defaults = {
     'HOSTNAME': '0.0.0.0',
     'HOST_PORT': 1337,
     'HOST_FOLDER': os.path.expanduser("~"),
+    'DOMME_NAME': 'Domme'
 }
 
 
@@ -49,7 +50,7 @@ OPTIONS = load_options()
 
 
 """
-OPTIONS['DOMME_NAME'] = 'Domme'
+
 OPTIONS['RANDOMIZE'] = False
 OPTIONS['ADV_METHOD'] = 'ADV_METHOD_AI'
 OPTIONS['SLIDESHOW_INCREMENT'] = 5
@@ -68,7 +69,7 @@ def calc_vscroll():
     return round(int(offset) / themes, 2) - .05
 
 
-def open_options():
+def open_options(server):
     """Open the options menu"""
     sG.theme(OPTIONS['THEME'].split()[1])
 
@@ -126,17 +127,6 @@ def open_options():
          sG.Col(gen_col_two)]
     ]
 
-    domme_options = [
-        [sG.T('Domme Options')],
-        [sG.T("Domme's Name:")],
-        [sG.In(OPTIONS['DOMME_NAME'], size=(20, 1),
-               k='DOMME_NAME', enable_events=True)],
-        [sG.T("Domme's Image Directory:")],
-        [sG.In(OPTIONS['DOMME_IMAGE_DIR'], size=(20, 1),
-               k='DOMME_IMAGE_DIR', enable_events=True),
-         sG.B('Browse')]
-    ]
-
     hotkey_options = [
         [sG.T('Hotkeys')],
         [sG.T('Configure number pad hotkeys for "lazy chat"')],
@@ -149,35 +139,27 @@ def open_options():
                           k='HOTKEY_%s' % i, enable_events=True)]
         hotkey_options.append(key_list)
 
-    col = [
-        [sG.T('Hostname/IP', size=(15, 1))],
-        [sG.T('Host Port', size=(15, 1))],
-        [sG.T('Host Folder', size=(15, 1))],
-    ]
-
-    col2 = [
-        [sG.In(OPTIONS['HOSTNAME'], size=(20, 1),
-               enable_events=True, k='HOSTNAME')],
-        [sG.In(OPTIONS['HOST_PORT'], size=(20, 1),
-               enable_events=True, k='HOST_PORT')],
-        [sG.In(OPTIONS['HOST_FOLDER'], size=(20, 1),
-               enable_events=True, k='HOST_FOLDER'),
-         sG.B('Browse', k='Browse0', metadata='folders')]
-    ]
     server_options = [
         [sG.T('Host Options')],
-        [sG.Column(col), sG.Column(col2)],
+        [sG.T('Hostname/IP', size=(15, 1)),
+         sG.In(server.opt_get('hostname'), size=(20, 1),
+               enable_events=True, k='SRV_hostname')],
+        [sG.T('Host Port', size=(15, 1)),
+         sG.In(server.opt_get('port'), size=(20, 1),
+               enable_events=True, k='SRV_port')],
+        [sG.T('Host Folder', size=(15, 1)),
+         sG.In(server.opt_get('folder'), size=(20, 1),
+               enable_events=True, k='SRV_folder'),
+         sG.B('Browse', k='Browse0', metadata='folders')],
+        [sG.HorizontalSeparator()],
+        [sG.T("Domme's Name:", size=(15, 1)),
+         sG.In(server.opt_get('domme-name'), size=(20, 1),
+               k='SRV_domme-name', enable_events=True)],
     ]
 
-    tab1_layout = general_options
-    tab2_layout = domme_options
-    tab3_layout = hotkey_options
-    tab4_layout = server_options
-
-    tab_group_layout = [[sG.Tab('General', tab1_layout),
-                         sG.Tab('Domme', tab2_layout),
-                         sG.Tab('Hotkeys', tab3_layout),
-                         sG.Tab('Server', tab4_layout)]]
+    tab_group_layout = [[sG.Tab('General', general_options),
+                         sG.Tab('Hotkeys', hotkey_options),
+                         sG.Tab('Server', server_options)]]
 
     layout = [[sG.TabGroup(tab_group_layout)]]
 

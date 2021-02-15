@@ -9,3 +9,4 @@ class AI():
         :type server: :class: `Server`
         """
         self.server = server
+        self.name = server.opt_get('domme_name')

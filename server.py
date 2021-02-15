@@ -120,11 +120,10 @@ class Server(object):
         - exit_event.set(): Signal server to shut down.
         """
 
-        self.host = OPTIONS['HOSTNAME']
-        self.port = OPTIONS['HOST_PORT']
+        self.host = self.opt_get('hostname')
+        self.port = self.opt_get('port')
         self.address = (self.host, self.port)
-        self.path = OPTIONS['HOST_FOLDER']
-        conn.execute('UPDATE options SET folder = ?', (self.path, ))
+        self.path = self.opt_get('folder')
         self.started = False
         self.clients = []
         self.server = None
@@ -189,6 +188,7 @@ class Server(object):
         """
         conn.execute("UPDATE options SET setting = ? WHERE name = ?",
                      (setting, opt))
+        conn.commit()
 
     def broadcast(self, msg: str, name: str) -> None:
         """

@@ -137,7 +137,7 @@ while True:
         solitaire.set_location(x, y)
         arcade.run()
     elif 'Browse' in event:
-        host_browse = FileBrowser(OPTIONS['HOST_FOLDER'],
+        host_browse = FileBrowser(server.opt_get('folder'),
                                   OPTIONS['THEME'][3:])
         host_browse.show()
     elif 'HOTKEY_' in event:
@@ -148,20 +148,24 @@ while True:
             client.send_message(OPTIONS[event])
             window['INPUT'].update('')
     elif event == "Options Menu":
-        opts = open_options()
+        opts = open_options(server)
         while True:
             opt_event, opt_vals = opts.read()
             if opt_event in ["Exit", sG.WIN_CLOSED]:
                 break
             if opt_event in OPTIONS.dict.keys():
                 OPTIONS[opt_event] = opt_vals[opt_event]
+            if 'SRV' in opt_event:
+                print(opt_event.split('_')[1])
+                server.opt_set(opt_event.split('_')[1],
+                               opt_vals[opt_event])
             if str(opt_event).startswith('Browse'):
                 filetype = opts[opt_event].metadata
-                browser = FileBrowser(opts['HOST_FOLDER'].get(),
+                browser = FileBrowser(server.opt_get('folder'),
                                       OPTIONS['THEME'][3:],
                                       filetype)
                 browser.show()
-                opts['HOST_FOLDER'].update(OPTIONS['HOST_FOLDER'])
+                opts['SRV_folder'].update(server.opt_get('folder'))
             if 'HOTKEY_' in opt_event:
                 window[opt_event].update(
                     text=f"{opts[opt_event].get()}\n{opt_event[-1]}")
