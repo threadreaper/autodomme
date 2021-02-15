@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 """Client class and associated methods"""
+from functools import lru_cache
 from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
 from threading import Thread
 
 import PySimpleGUI as sG
 from cryptography.hazmat.primitives.asymmetric import rsa
-
 from PIL import Image, ImageOps
-from functools import lru_cache
 
-from crypto import get_key_pair, load_pem, encrypt, decrypt, decrypt_file
-
+from crypto import decrypt, decrypt_file, encrypt, get_key_pair, load_pem
 from options import OPTIONS
 
 
@@ -45,28 +43,32 @@ class Client:
         self.srv_key = rsa.RSAPublicKey
         self.client_socket = socket(AF_INET, SOCK_STREAM)
         self.messages = []
-        self.session = None
+        self.connected = False
         self.session = Session()
 
     def connect(self):
         """Attempt to connect to a server"""
-        self.client_socket.connect(self.address)
-        self.client_socket.send(self.public_key)
-        self.srv_key = load_pem(self.client_socket.recv(833))
-        if isinstance(self.srv_key, rsa.RSAPublicKey):
-            authenticated = self.authenticate('')
-            while authenticated != 'True':
-                if not authenticated:
-                    break
-                authenticated = self.authenticate(authenticated)
-            if authenticated:
-                self.window['CLIENT_STATUS'].update(
-                    'Connected to server at: %s' % OPTIONS['SERVER_ADDRESS'])
-                receive_thread = Thread(target=self.receive_messages)
-                receive_thread.start()
-                self.send_message(self.chat_name)
+        if self.connected is False:
+            self.client_socket.connect(self.address)
+            self.client_socket.send(self.public_key)
+            self.srv_key = load_pem(self.client_socket.recv(833))
+            if isinstance(self.srv_key, rsa.RSAPublicKey):
+                authenticated = self.authenticate('')
+                while authenticated != 'True':
+                    if not authenticated:
+                        break
+                    authenticated = self.authenticate(authenticated)
+                if authenticated:
+                    self.window['CLIENT_STATUS'].update(
+                        'Connected to server at: %s' % OPTIONS['SERVER_ADDRESS'])
+                    receive_thread = Thread(target=self.receive_messages)
+                    receive_thread.start()
+                    self.send_message(self.chat_name)
+                    self.connected = True
+            else:
+                print('Key handshake failure - connection rejected')
         else:
-            print('Key handshake failure - connection rejected')
+            self.window['CLIENT_STATUS'].update('Error: already connected.')
 
     def update_window(self):
         """Add user to online users list"""
@@ -112,7 +114,10 @@ class Client:
                     self.session.online_users.remove(msg.split()[0])
                     self.update_window()
                 elif msg.startswith('IMG'):
-                    self._get_file(msg)
+                    with BytesIO() as bio:
+                        self._get_file(msg).save(bio, format="PNG")
+                        self.window['IMAGE'].update(data=bio.getvalue())
+
                 else:
                     sG.cprint(msg)
             except OSError as error:
@@ -164,6 +169,7 @@ class Client:
     def disconnect(self):
         """Disconnect from chat server."""
         self.send_message("/quit")
+        self.connected = False
 
     def authenticate(self, last):
         """Authenticate on the server."""

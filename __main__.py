@@ -7,6 +7,7 @@ from filebrowser import FileBrowser
 from options import OPTIONS, open_options
 from server import Server
 from solitaire import MyGame, arcade
+import time as t
 
 
 def main_window():
@@ -101,19 +102,37 @@ def main_window():
 window = main_window()
 server = Server()
 client = Client(window)
+slideshow = server.slideshow
+
+time = t.time()
 
 while True:
+    delta = t.time() - time
+    slideshow.update(delta)
     event, values = window.read(timeout=50)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
     elif event == 'Start Server':
         server.set_up_server()
+    elif event == 'Kill Server':
+        server.kill()
     elif event == 'Connect to Server':
         client = Client(window)
         client.connect()
+    elif event == 'PLAY':
+        slideshow.start()
+    elif event == 'PAUSE':
+        slideshow.stop()
+    elif event == 'BACK':
+        slideshow.back()
+    elif event == 'FORWARD':
+        slideshow.next()
     elif event == 'Submit':
-        client.send_message(window['INPUT'].get())
-        window['INPUT'].update('')
+        if client.connected is True:
+            client.send_message(window['INPUT'].get())
+            window['INPUT'].update('')
+        else:
+            window['INPUT'].update('Error: Not connected to server')
     elif event == 'HIDE':
         x, y = window.current_location()
         window.hide()
@@ -126,7 +145,10 @@ while True:
                                   OPTIONS['THEME'][3:])
         host_browse.show()
     elif 'HOTKEY_' in event:
-        if window.find_element_with_focus() != window['INPUT']:
+        if (
+            client.connected is True
+            and window.find_element_with_focus() != window['INPUT']
+        ):
             client.send_message(OPTIONS[event])
             window['INPUT'].update('')
     elif event == "Options Menu":
@@ -165,5 +187,6 @@ while True:
         status = server.queue.get(False)
         window['SERVER_STATUS'].update(status)
 
-
+if server.started is True:
+    server.kill()
 window.close()

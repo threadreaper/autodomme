@@ -7,7 +7,6 @@ import sqlite3
 from queue import SimpleQueue
 from threading import Lock, Thread
 from typing import Any
-
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from options import OPTIONS
@@ -15,6 +14,58 @@ from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
     encrypt_file
 
 conn = sqlite3.connect('teaseai.db')
+
+
+class SlideShow():
+    """Class for an Image slideshow"""
+    def __init__(self, folder, server):
+        self.directory = folder
+        files = os.listdir(folder)
+        self.images = [os.path.join(folder, f) for f in files
+                       if os.path.isfile(os.path.join(folder, f)) and
+                       f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff',
+                                           'bmp'))]
+
+        self.index = 0
+        self.time = 0
+        self.server = server
+        self.started = False
+
+    def start(self):
+        self.started = True
+
+    def stop(self):
+        self.started = False
+
+    def show(self):
+        """Start the slideshow"""
+        image = os.path.join(self.directory, self.images[self.index])
+        self.server.broadcast_image(image)
+
+    def next(self):
+        """Advance the slideshow to the next slide"""
+        if self.index + 1 == len(self.images):
+            self.index = 0
+        else:
+            self.index += 1
+        self.show()
+
+    def back(self):
+        """Display the slide before the current slide"""
+        self.index -= 1
+        self.show()
+
+    def update(self, delta):
+        """Update the slideshow"""
+        if self.started is True:
+            if OPTIONS['HOST_FOLDER'] != self.directory:
+                self.directory = OPTIONS['HOST_FOLDER']
+                self.images = os.listdir(self.directory)
+                self.show()
+            self.time += delta
+            if self.time > 5000:
+                self.time = 0
+                self.next()
 
 
 class Person:
@@ -74,11 +125,13 @@ class Server(object):
         self.address = (self.host, self.port)
         self.path = OPTIONS['HOST_FOLDER']
         conn.execute('UPDATE options SET folder = ?', (self.path, ))
+        self.started = False
         self.clients = []
         self.server = None
         self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
         self.queue = SimpleQueue()
+        self.slideshow = SlideShow(self.path, self)
 
     def set_up_server(self) -> None:
         """
@@ -86,16 +139,31 @@ class Server(object):
         clients.
         """
         try:
-            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server.bind(self.address)
-            self.server.listen(5)
-            self.queue.put("Server Set-Up Successful")
-            accept_thread = Thread(target=self._start_server, daemon=True)
-            accept_thread.start()
+            if self.started is True:
+                self.queue.put('Error: Server is already running')
+            else:
+                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.server.bind(self.address)
+                self.server.listen(5)
+                self.queue.put("Server Set-Up Successful")
+                self.started = True
+                accept_thread = Thread(target=self._start_server, daemon=True)
+                accept_thread.start()
         except socket.error as error:
             self.queue.put("Error....Unable to Set Up Sockets with"
                            "{0}".format(error.strerror))
             self.server.close()
+
+    def kill(self) -> None:
+        """Shuts down a running server."""
+        if self.started is True:
+            self.queue.put("Server shut down")
+            if self.slideshow.started is True:
+                self.slideshow.started = False
+            self.started = False
+            self.server.close()
+        else:
+            self.queue.put("Error: No Server is running.")
 
     def opt_get(self, opt: str) -> Any:
         """
