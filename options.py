@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Load/Save user options and spawn the options window"""
+"""Functions to load user options and spawn the options window"""
 import os
 import json
 from json.decoder import JSONDecodeError
 import PySimpleGUI as sG
+from server import Server
 
 
 load_defaults = {
@@ -27,8 +28,13 @@ load_defaults = {
 }
 
 
-def load_options():
-    """Load the config file or load defaults"""
+def load_options() -> sG.UserSettings:
+    """
+    Load the config file or load defaults
+
+    :return: An instance of `PySimpleGUI.UserSettings`
+    :rtype: :class:`PySimpleGUI.UserSettings`
+    """
     opts = sG.UserSettings('config.json', os.getcwd())
     try:
         with open('config.json', 'r') as file:
@@ -45,19 +51,11 @@ def load_options():
 OPTIONS = load_options()
 
 
-"""
-
-OPTIONS['RANDOMIZE'] = False
-OPTIONS['ADV_METHOD'] = 'ADV_METHOD_AI'
-OPTIONS['SLIDESHOW_INCREMENT'] = 5
-"""
-
-
-def calc_vscroll():
+def _calc_vscroll() -> float:
     """
     Calculates and returns the vertical scroll offset for the theme listbox.
 
-    :return: The vertical scroll offset
+    :return: The vertical scroll offset.
     :rtype: float
     """
     offset = OPTIONS['THEME'].split('.')[0]
@@ -65,8 +63,15 @@ def calc_vscroll():
     return round(int(offset) / themes, 2) - .05
 
 
-def open_options(server):
-    """Open the options menu"""
+def open_options(server: Server) -> sG.Window:
+    """
+    Open the options menu
+
+    :param server: An instance of a `Server` object.
+    :type server: :class:`Server`
+    :return: An instance of `PySimpleGUI.Window`.
+    :rtype: :class:`PySimpleGUI.Window`
+    """
     sG.theme(OPTIONS['THEME'].split()[1])
 
     gen_col_one = [
@@ -160,6 +165,6 @@ def open_options(server):
     layout = [[sG.TabGroup(tab_group_layout)]]
 
     dialog = sG.Window("Options", layout, finalize=True)
-    dialog['THEME'].set_vscroll_position(calc_vscroll())
+    dialog['THEME'].set_vscroll_position(_calc_vscroll())
 
     return dialog
