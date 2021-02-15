@@ -24,10 +24,6 @@ load_defaults = {
     'CHAT_NAME': None,
     'SERVER_PORT': 1337,
     'SERVER_ADDRESS': None,
-    'HOSTNAME': '0.0.0.0',
-    'HOST_PORT': 1337,
-    'HOST_FOLDER': os.path.expanduser("~"),
-    'DOMME_NAME': 'Domme'
 }
 
 
