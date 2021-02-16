@@ -16,8 +16,8 @@ from options import OPTIONS
 class Session:
     """Holds session variables while connected to a server."""
 
-    def __init__(self):
-
+    def __init__(self) -> None:
+        """Initialize the session."""
         self.srv_folder = ''
         self.online_users = []
 
@@ -28,6 +28,9 @@ class Client:
     def __init__(self, window: sG.Window) -> None:
         """
         Initializes the client.
+
+        Public methods:
+        - connect(): Connect to server.
 
         :param window: Instance of Window used for updating the GUI.
         :window type: sG.Window
@@ -46,22 +49,22 @@ class Client:
         self.connected = False
         self.session = Session()
 
-    def connect(self):
+    def connect(self) -> None:
         """Attempt to connect to a server"""
         if self.connected is False:
             self.client_socket.connect(self.address)
             self.client_socket.send(self.public_key)
             self.srv_key = load_pem(self.client_socket.recv(833))
             if isinstance(self.srv_key, rsa.RSAPublicKey):
-                authenticated = self.authenticate('')
+                authenticated = self._authenticate()
                 while authenticated != 'True':
                     if not authenticated:
                         break
-                    authenticated = self.authenticate(authenticated)
+                    authenticated = self._authenticate(authenticated)
                 if authenticated:
                     self.window['CLIENT_STATUS'].update(
-                        'Connected to server at: %s' % OPTIONS['SERVER_ADDRESS'])
-                    receive_thread = Thread(target=self.receive_messages)
+                        'Connected to server: %s' % OPTIONS['SERVER_ADDRESS'])
+                    receive_thread = Thread(target=self._receive_messages)
                     receive_thread.start()
                     self.send_message(self.chat_name)
                     self.connected = True
@@ -70,13 +73,13 @@ class Client:
         else:
             self.window['CLIENT_STATUS'].update('Error: already connected.')
 
-    def update_window(self):
-        """Add user to online users list"""
+    def _update_users(self) -> None:
+        """Updates the online users list."""
         self.window['ONLINE_USERS'].update('', append=False)
         for user in self.session.online_users:
             self.window['ONLINE_USERS'].update('%s\n' % user, append=True)
 
-    def _set_session_vars(self, msg):
+    def _set_session_vars(self, msg: str) -> None:
         """
         Sets session variables sent by the server.
 
@@ -89,13 +92,10 @@ class Client:
         for chunk in chunks[3:]:
             if chunk != 'END':
                 self.session.online_users.append(chunk)
-        self.update_window()
+        self._update_users()
 
-    def receive_messages(self):
-        """
-        receive messages from server
-        :return: None
-        """
+    def _receive_messages(self) -> None:
+        """Receive messages from the server."""
         while True:
             try:
                 msg = self.client_socket.recv(self.buffer)
@@ -108,11 +108,11 @@ class Client:
                     sG.cprint(msg)
                     if msg.split()[0] != OPTIONS['CHAT_NAME']:
                         self.session.online_users.append(msg.split()[0])
-                        self.update_window()
+                        self._update_users()
                 elif msg.endswith('has left the chat.'):
                     sG.cprint(msg)
                     self.session.online_users.remove(msg.split()[0])
-                    self.update_window()
+                    self._update_users()
                 elif msg.startswith('IMG'):
                     with BytesIO() as bio:
                         self._get_file(msg).save(bio, format="PNG")
@@ -124,7 +124,16 @@ class Client:
                 print('[EXCEPTION]', error)
                 break
 
-    def _get_file(self, msg):
+    def _get_file(self, msg: str):
+        """
+        Retrieves a file from the server given a message packet containing \
+            a header that indicates the server is preparing to send a file.
+
+        :param msg: Message packet starting with the IMG header.
+        :type msg: str
+        :return: A PIL `Image` object.
+        :rtype: :class:`Image`
+        """
         _, length, key = msg.split(':')
         img = self.client_socket.recv(self.buffer)
         while len(img) < int(length):
@@ -146,14 +155,15 @@ class Client:
         :rtype: bytes
         """
         self.send_message('FILE:%s' % filename)
-        msg = self.client_socket.recv(self.buffer)
+        msg = decrypt(self.private_key, self.client_socket.recv(self.buffer))
         return self._get_file(msg)
 
-    def send_message(self, msg):
+    def send_message(self, msg: str) -> None:
         """
-        send messages to server
-        :param msg: str
-        :return: None
+        Send a message to the server.
+
+        :param msg: Message to send.
+        :type msg: string
         """
         try:
             txt = encrypt(self.srv_key, msg)
@@ -166,13 +176,21 @@ class Client:
             self.client_socket.connect(self.address)
             print(error)
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnect from chat server."""
         self.send_message("/quit")
         self.connected = False
 
-    def authenticate(self, last):
-        """Authenticate on the server."""
+    def _authenticate(self, last: str = None) -> str:
+        """
+        Authenticate on the server. Returns the server's response.
+
+        :param last: The server's response to previous attempt to \
+            authenticate or None if this the first attempt.
+        :type last: string
+        :return: The server's response.
+        :rtype: string
+        """
         login_layout = [
             [sG.T(last, size=(30, 1), visible=(False, True)[last != ''])],
             [sG.T("Username:", size=(15, 1)),
@@ -192,7 +210,7 @@ class Client:
             event = login.read()[0]
             if event in ['Cancel', sG.WIN_CLOSED]:
                 login.close()
-                return False
+                return 'Previous login attempt suspended.'
             elif event == 'Submit':
                 username = login['USERNAME'].get()
                 password = login['PASSWORD'].get()
