@@ -176,7 +176,7 @@ while True:
                 old = [opts, window]
                 window = main_window()
                 client.window = window
-                opts = open_options()
+                opts = open_options(server)
                 for expired in old:
                     expired.close()
             else:

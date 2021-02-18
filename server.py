@@ -185,7 +185,7 @@ class Server(object):
         Log a user in to the server, returns True on success, False otherwise.
 
         :param person: The person object of the client attempting to
-        authenticate
+        authenticate.
         :type person: :class:`Person`
         :returns: True on success, False otherwise
         :rtype: bool

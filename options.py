@@ -4,7 +4,6 @@ import os
 import json
 from json.decoder import JSONDecodeError
 import PySimpleGUI as sG
-from server import Server
 
 
 load_defaults = {
@@ -63,7 +62,7 @@ def _calc_vscroll() -> float:
     return round(int(offset) / themes, 2) - .05
 
 
-def open_options(server: Server) -> sG.Window:
+def open_options(server: :class:Server) -> sG.Window:
     """
     Open the options menu
 
