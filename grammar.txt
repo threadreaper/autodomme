@@ -1,0 +1,29 @@
+set flag verb
+edge verb
+hold edge verb
+let the edge fade verb
+show image verb
+show image by tag verb
+show video verb
+random number verb
+change variable verb
+cum verb
+ruin verb
+
+
+functions:
+-DONE goto  - skip to the specified anchor - can only go forwards
+-DONE chance - 2 params, 2 digit chance and command to execute on success
+answer - 2 params, 2 digit timout and command to execute on timeout ~ recursive
+ -DONE var - get the value of an option variable
+startStroking - tell sub to start stroking and set the flag that sub is stroking
+stopStroking - tell sub to stop stroking and set the flag that sub is not stroking
+end - marks the end of a script
+pause - makes the ai pause before proceeding
+
+
+@Info decorator must be the first line of the script
+# anchor begins with ## and must begin the line
+vocab surrounded with _vocab_  <- Markdown italic
+answers begin with - **answer** <- Markdown UL and italic
+verbs utilize function notation

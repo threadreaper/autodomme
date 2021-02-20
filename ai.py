@@ -1,11 +1,10 @@
-from server import Server
-import os
+from parser import Parser
 
 
 class AI():
     """Class for AI domme"""
 
-    def __init__(self, server: Server = None) -> None:
+    def __init__(self, server) -> None:
         """
         Initializes the AI
 
@@ -20,6 +19,7 @@ class AI():
         self.lines = []
         self.index = 0
         self.send('%s has joined the chat!' % self.name, '')
+        self.parser = Parser('./Scripts/Start/HappyToSeeMe.md')
 
     def send(self, msg, name):
         self.server.broadcast(msg, name)
@@ -28,20 +28,19 @@ class AI():
         """
         Initializes an AI-guided teasing session.
         """
-        starts = os.listdir('./Scripts')
-        print(starts)
-        #with open(script, 'r') as file:
-        #    self.lines = file.readlines()
+        # starts = os.listdir('./Scripts')
 
     def update(self, delta):
         """
         Runs the next line of a script.
         """
+
         self.delta += delta
+        if self.parser.index >= len(self.parser.lines):
+            return None
         if self.delta >= self.time:
-            self.send(self.lines[self.index], self.name)
-
-
-if __name__ == '__main__':
-    ai = AI()
-    ai.start_script()
+            self.delta = 0
+            line = self.parser.parse(self.parser.lines[self.parser.index])
+            if line and line.startswith('"'):
+                self.send(line.strip(), self.name)
+            self.parser.index += 1

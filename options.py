@@ -62,7 +62,7 @@ def _calc_vscroll() -> float:
     return round(int(offset) / themes, 2) - .05
 
 
-def open_options(server: :class:Server) -> sG.Window:
+def open_options(server: object) -> sG.Window:
     """
     Open the options menu
 

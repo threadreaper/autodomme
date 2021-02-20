@@ -13,6 +13,8 @@ from options import OPTIONS
 from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
     encrypt_file
 
+from ai import AI
+
 conn = sqlite3.connect('teaseai.db')
 
 
@@ -69,7 +71,7 @@ class Server(object):
         """
 
         self.host = self.opt_get('hostname')
-        self.port = self.opt_get('port')
+        self.port = int(self.opt_get('port'))
         self.address = (self.host, self.port)
         self.path = self.opt_get('folder')
         self.started = False
@@ -79,6 +81,7 @@ class Server(object):
         self.client_lock = Lock()
         self.queue = SimpleQueue()
         self.slideshow = SlideShow(self.path, self)
+        self.ai = None
 
     def set_up_server(self) -> None:
         """
@@ -121,8 +124,10 @@ class Server(object):
         :returns: Option setting
         :rtype: string
         """
-        for row in conn.execute("SELECT setting FROM options WHERE name = ?",
-                                (opt, )):
+        con = sqlite3.connect('teaseai.db')
+        for row in con.execute("SELECT setting FROM options WHERE name = \
+                               ?", (opt, )):
+            con.close()
             return row[0]
 
     def opt_set(self, opt: str, setting: Any) -> None:
@@ -269,6 +274,7 @@ class Server(object):
         """
         client = person.client
         if self._login(person):
+            self.ai = AI(self)
             while True:
                 msg = decrypt(self.private_key, client.recv(512))
                 self.queue.put("Received Message: {0}".format(msg))

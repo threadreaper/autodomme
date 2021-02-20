@@ -105,6 +105,11 @@ time = t.time()
 while True:
     delta = t.time() - time
     slideshow.update(delta)
+    try:
+        if server.ai is not None:
+            server.ai.update(delta)
+    except Exception as e:
+        print(e)
     event, values = window.read(timeout=50)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
