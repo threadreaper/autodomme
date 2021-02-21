@@ -1,8 +1,9 @@
 import re
 import sqlite3
 import random
-from typing import Union
+from typing import Any
 from options import OPTIONS
+from collections import namedtuple
 
 
 class Parser():
@@ -20,12 +21,14 @@ class Parser():
         self.lines = self.read()
         self.index = -1
         self.rx_dict = {
-            'string': re.compile(r'\".*\"'),
             'function': re.compile(r'\S+\(.*\)'),
             'option': re.compile(r'^-\s\*\*.*\*\*\s.*\n'),
-            'anchor': re.compile(r'^#\s.*\n')
+            'anchor': re.compile(r'^#\s.*\n'),
+            'question': re.compile(r'\".*\?\"\s'),
+            'string': re.compile(r'\".*\"'),
         }
         self.stroking = False
+        self.stack = []
 
     def _get_synonym(self, vocab):
         """
@@ -65,7 +68,7 @@ class Parser():
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
                     lines[i] = line.replace(hit, self._get_synonym(hit))
-            regex = re.compile(r'var\(.*\)')
+            regex = re.compile(r'var\(\w+_*\w*\)')
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
                     args = self._parse_function(hit)[1]
@@ -92,9 +95,13 @@ class Parser():
 
     def get_answer(self):
         options = []
-        input = 'yeah'
+        # TODO: prompt user after timeout
         # TODO: get input from the chat
         # TODO: resolve options to vocab words
+        if self.lines[self.index + 1].startswith('#'):
+            self.index += 2
+        if self.lines[self.index].startswith('#'):
+            self.index += 1
         for i, line in enumerate(self.lines[self.index:]):
             match = re.match(self.rx_dict['option'], line)
             if match:
@@ -104,13 +111,13 @@ class Parser():
             match = re.match(self.rx_dict['anchor'], line)
             if match:
                 break
-
+        input = 'yeah'
         for option in options:
             if input in option[0]:
-                self.index += option[2]
-                self.lines.insert(self.index + 1, option[1])
+                self.index += option[2] - 1
+                return option[1]
 
-    def parse(self, line: str) -> Union[str, None]:
+    def parse(self, line: str) -> Any:
         """
         Parses a line of a script.  Returns output if any is necessary.
 
@@ -120,45 +127,56 @@ class Parser():
         :return: String to output to chat.
         :rtype: str|None
         """
-        line = self.lines[self.index]
+        # line = self.lines[self.index]
         for key, rx in self.rx_dict.items():
             match = rx.findall(line)
             if len(match) > 0:
+                if key == 'question':
+                    for item in match:
+                        self.parse('\"%s\"' % item.strip())
+                        self.parse('%s' % self.get_answer())
                 if key == 'function':
                     for item in match:
                         func, args = self._parse_function(match[0])
                         if func == 'chance':
                             if random.randint(0, 100) <= int(args[0]):
-                                self.lines.insert(self.index + 1, args[1])
+                                self.parse(args[1])
                         elif func == 'goto':
                             for i, line in enumerate(self.lines):
                                 if args[0] in line and line.startswith('#'):
-                                    self.index = i - 1
-                        elif func == 'answer':
-                            # timeout, prompt = args[0], args[1]
-                            # TODO: figure out how to implement timeout/prompt
-                            return(self.get_answer())
+                                    self.index = i
                         elif func == 'startStroking':
-                            newline = self._get_synonym('_Start stroking._')
-                            self.lines.insert(self.index + 1,
-                                              '\"%s\"' % newline)
                             self.stroking = True
+                            return '\"%s\"' % \
+                                self._get_synonym('_Start stroking._')
                         elif func == 'stopStroking':
-                            newline = self._get_synonym('_Stop stroking._')
-                            self.lines.insert(self.index + 1,
-                                              '\"%s\"' % newline)
                             self.stroking = False
+                            return '\"%s\"' % \
+                                self._get_synonym('_Stop stroking._')
+                        elif func == 'setFlag':
+                            OPTIONS[args[0]] = True
+                            return None
+                        elif func == 'getFlag':
+                            keys = OPTIONS.dict.keys()
+                            if args[0] in keys and OPTIONS[args[0]]:
+                                self.lines.insert(self.index + 1, 'goto(%s)' %
+                                                  args[0])
+                            return None
+                        elif func == 'loopAnswer':
+                            for i, line in enumerate(self.lines):
+                                if args[0] in line and line.startswith('#'):
+                                    self.index = i + 1
+                            return self.get_answer()
                         elif func == 'end':
                             break
                             # TODO: pick up new script
                 elif key == 'string':
                     for item in match:
-                        return item
+                        return item.strip()
 
 
 if __name__ == '__main__':
     parser = Parser('Scripts/Start/HappyToSeeMe.md')
-    parser.parse(parser.lines[parser.index])
     while parser.index <= len(parser.lines) - 2:
         parser.index += 1
         line = parser.parse(parser.lines[parser.index])

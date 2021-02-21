@@ -9,17 +9,20 @@ random number verb
 change variable verb
 cum verb
 ruin verb
+set flag / check flag verb
 
 
 functions:
+setFlag - create a flag for the client and set it to True
+checkFlag - get value of a script-created boolean client flag, if True, execute a goto statement to the anchor provided as an argument
 -DONE goto  - skip to the specified anchor - can only go forwards
 -DONE chance - 2 params, 2 digit chance and command to execute on success
-answer - 2 params, 2 digit timout and command to execute on timeout ~ recursive
+-NEEDS WORK ? - question function, looks for some input from the user and compares it to the list of options provided by the script
+loopAnswer - executes a goto, sending the script back to the top of the list of options for the current question and repeats the process of handling user input
  -DONE var - get the value of an option variable
 startStroking - tell sub to start stroking and set the flag that sub is stroking
 stopStroking - tell sub to stop stroking and set the flag that sub is not stroking
 end - marks the end of a script
-pause - makes the ai pause before proceeding
 
 
 @Info decorator must be the first line of the script

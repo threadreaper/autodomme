@@ -104,6 +104,7 @@ time = t.time()
 
 while True:
     delta = t.time() - time
+    time = t.time()
     slideshow.update(delta)
     try:
         if server.ai is not None:
