@@ -3,7 +3,6 @@ import sqlite3
 import random
 from typing import Any
 from options import OPTIONS
-from collections import namedtuple
 
 
 class Parser():
@@ -167,6 +166,10 @@ class Parser():
                                 if args[0] in line and line.startswith('#'):
                                     self.index = i + 1
                             return self.get_answer()
+                        elif func == 'edge':
+                            # TODO: wait for edge confirmation from client
+                            return '\"%s\"' % \
+                                self._get_synonym('_Edge._')
                         elif func == 'end':
                             break
                             # TODO: pick up new script

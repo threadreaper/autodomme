@@ -6,7 +6,6 @@
 - **no, not, not happy** "No?"  
 goto(You Must Know What I'm About To Do)  
 - **yes, yeah, am happy, I'm happy** "I'm glad to hear that var(chat_name)"
-loopAnswer(question1)  
 "I've been thinking about all these fun ways to torment a _cock_"  
 "And there's not a lot of guys who can handle that"  
 "That's why I'm always glad to see you here willing to please me"  
