@@ -69,7 +69,8 @@ def convert(script):
     return lines, filename
 
 
-lines, filename = convert('/home/michael/projects/teaseme/Tease AI 0.54.9/Scripts/Wicked Tease/Modules/AssOrTitsMan_EDGING.txt')
+lines, filename = convert('/home/michael/projects/teaseme/Tease AI 0.54.9/\
+    Scripts/Wicked Tease/Modules/AssOrTitsMan_EDGING.txt')
 
 with open('%s/%s' % (scripts_dir, filename), 'w') as file:
     file.writelines(lines)
