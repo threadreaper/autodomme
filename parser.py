@@ -31,7 +31,7 @@ class Parser():
         self.stroking = False
         self.stack = []
 
-    def _get_synonym(self, vocab):
+    def _get_synonym(self, vocab: str) -> str:
         """
         Retrieves a list of synonyms for the given vocab word from the
         database and returns a randomly selected synonym.
@@ -188,6 +188,13 @@ if __name__ == '__main__':
             print(line)
 
     def syn(terms: list) -> None:
+        """
+        Takes a list of indeces for vocab words and adds the synonym\
+        crossreferences to the database.
+
+        :param terms: The list of indeces of synonyms in the vocab table.
+        :type terms: list
+        """
         conn = sqlite3.connect(DB)
         junk = []
         for term in terms:
