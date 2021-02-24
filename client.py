@@ -20,12 +20,14 @@ class Session:
         """Initialize the session."""
         self.srv_folder = ''
         self.online_users = []
+        self.browser_folders = []
+        self.browser_files = []
 
 
 class Client:
     """Client object for communication with server."""
 
-    def __init__(self, window: sG.Window) -> None:
+    def __init__(self, window: sG.Window = None) -> None:
         """
         Initializes the client.
 
@@ -62,8 +64,10 @@ class Client:
                         break
                     authenticated = self._authenticate(authenticated)
                 if authenticated:
-                    self.window['CLIENT_STATUS'].update(
-                        'Connected to server: %s' % OPTIONS['SERVER_ADDRESS'])
+                    if self.window is not None:
+                        self.window['CLIENT_STATUS'].update(
+                            'Connected to server: %s' %
+                            OPTIONS['SERVER_ADDRESS'])
                     receive_thread = Thread(target=self._receive_messages)
                     receive_thread.start()
                     self.send_message(self.chat_name)
@@ -71,13 +75,15 @@ class Client:
             else:
                 print('Key handshake failure - connection rejected')
         else:
-            self.window['CLIENT_STATUS'].update('Error: already connected.')
+            if self.window is not None:
+                self.window['CLIENT_STATUS'].update('Error: already connected.')
 
     def _update_users(self) -> None:
         """Updates the online users list."""
-        self.window['ONLINE_USERS'].update('', append=False)
-        for user in self.session.online_users:
-            self.window['ONLINE_USERS'].update('%s\n' % user, append=True)
+        if self.window is not None:
+            self.window['ONLINE_USERS'].update('', append=False)
+            for user in self.session.online_users:
+                self.window['ONLINE_USERS'].update('%s\n' % user, append=True)
 
     def _set_session_vars(self, msg: str) -> None:
         """
@@ -104,6 +110,16 @@ class Client:
                 msg = decrypt(self.private_key, msg)
                 if msg.startswith('PATH'):
                     self._set_session_vars(msg)
+                elif msg.startswith('FOLDERS:'):
+                    stuff = msg.split(':')
+                    try:
+                        self.session.browser_folders = stuff[1].split(',')
+                    except IndexError:
+                        pass
+                    try:
+                        self.session.browser_files = stuff[3].split(',')
+                    except IndexError:
+                        pass
                 elif msg.endswith('has joined the chat!'):
                     sG.cprint(msg)
                     if msg.split()[0] != OPTIONS['CHAT_NAME']:
@@ -116,7 +132,8 @@ class Client:
                 elif msg.startswith('IMG'):
                     with BytesIO() as bio:
                         self._get_file(msg).save(bio, format="PNG")
-                        self.window['IMAGE'].update(data=bio.getvalue())
+                        if self.window is not None:
+                            self.window['IMAGE'].update(data=bio.getvalue())
 
                 else:
                     sG.cprint(msg)
@@ -169,7 +186,8 @@ class Client:
             txt = encrypt(self.srv_key, msg)
             self.client_socket.send(txt)
             if msg == "/quit":
-                self.window['CLIENT_STATUS'].update('Not connected.')
+                if self.window is not None:
+                    self.window['CLIENT_STATUS'].update('Not connected.')
                 self.client_socket.close()
         except OSError as error:
             self.client_socket = socket(AF_INET, SOCK_STREAM)

@@ -29,7 +29,6 @@ class Parser():
             'string': re.compile(r'\".*\"'),
         }
         self.stroking = False
-        self.stack = []
 
     def _get_synonym(self, vocab: str) -> str:
         """

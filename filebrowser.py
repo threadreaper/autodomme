@@ -20,7 +20,7 @@ class FileBrowser():
         self.path = path
         self.filetype = filetype
         self.treedata = sG.TreeData()
-        self._add_folder('', self.path)
+        self._add_folder(self.path)
 
         self.layout = [
             [
@@ -51,9 +51,9 @@ class FileBrowser():
         self.preview_frame = self.window['IMAGE'].get_size()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
 
-    def _add_folder(self, parent, path):
+    def _add_folder(self, path):
         """Add a folder to the tree - internal method only."""
-
+        parent = '' if path == '/media/veracrypt1' else path
         files = []
         folders = []
         for item in os.listdir(path):
@@ -61,17 +61,19 @@ class FileBrowser():
                 fqp = os.path.join(path, item)
                 if os.path.isdir(fqp):
                     folders.append(item)
+
                 elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
                     files.append(item)
         folder_icon = 'folder.png'
         for folder in sorted(folders, key=str.lower):
-            fqp = os.path.join(self.path, folder)
+            fqp = os.path.join(path, folder)
             self.treedata.insert(parent, fqp, '  ' + folder, [fqp],
                                  icon=folder_icon)
+            self._add_folder(fqp)
         if self.filetype != 'folders':
             file_icon = 'file.png'
             for file in sorted(files):
-                fqp = os.path.join(self.path, file)
+                fqp = os.path.join(path, file)
                 self.treedata.insert(parent, fqp, '  ' +
                                      file, [], icon=file_icon)
 
@@ -94,7 +96,6 @@ class FileBrowser():
         """Show the file browser window."""
         while True:
             event, values = self.window.read()
-            print(event)
             if event in ['Cancel', sG.WIN_CLOSED]:
                 break
             if event == 'UP':
@@ -106,14 +107,11 @@ class FileBrowser():
             if event == 'Select':
                 OPTIONS['HOST_FOLDER'] = values['PATH']
                 break
-            if os.path.isdir(values[event][0]):
-                self._change_path(values[event][0], self.path)
-                break
             if os.path.isfile(values[event][0]):
                 self.preview(values[event][0], self.preview_frame)
         self.window.close()
 
 
 if __name__ == "__main__":
-    win = FileBrowser(OPTIONS['HOST_FOLDER'], 'DarkAmber')
+    win = FileBrowser('/media/veracrypt1', 'DarkAmber')
     win.show()

@@ -9,13 +9,14 @@ from threading import Lock, Thread
 from typing import Any
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from options import OPTIONS
 from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
     encrypt_file
 
 from ai import AI
 
-conn = sqlite3.connect('teaseai.db')
+DB = 'teaseai.db'
+
+conn = sqlite3.connect(DB)
 
 
 class Person:
@@ -76,12 +77,12 @@ class Server(object):
         self.path = self.opt_get('folder')
         self.started = False
         self.clients = []
-        self.server = None
+        self.socket = None
         self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
         self.queue = SimpleQueue()
         self.slideshow = SlideShow(self.path, self)
-        self.ai = None
+        self.ai = AI(self)
 
     def set_up_server(self) -> None:
         """
@@ -92,9 +93,9 @@ class Server(object):
             if self.started is True:
                 self.queue.put('Error: Server is already running')
             else:
-                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.server.bind(self.address)
-                self.server.listen(5)
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.bind(self.address)
+                self.socket.listen(5)
                 self.queue.put("Server Set-Up Successful")
                 self.started = True
                 accept_thread = Thread(target=self._start_server, daemon=True)
@@ -102,7 +103,7 @@ class Server(object):
         except socket.error as error:
             self.queue.put("Error....Unable to Set Up Sockets with"
                            "{0}".format(error.strerror))
-            self.server.close()
+            self.socket.close()
 
     def kill(self) -> None:
         """Shuts down a running server."""
@@ -111,7 +112,7 @@ class Server(object):
             if self.slideshow.started is True:
                 self.slideshow.started = False
             self.started = False
-            self.server.close()
+            self.socket.close()
         else:
             self.queue.put("Error: No Server is running.")
 
@@ -124,7 +125,7 @@ class Server(object):
         :returns: Option setting
         :rtype: string
         """
-        con = sqlite3.connect('teaseai.db')
+        con = sqlite3.connect(DB)
         for row in con.execute("SELECT setting FROM options WHERE name = \
                                ?", (opt, )):
             con.close()
@@ -235,7 +236,7 @@ class Server(object):
         :return: True on success
         :rtype: bool
         """
-        con = sqlite3.connect('teaseai.db')
+        con = sqlite3.connect(DB)
         auth_packet = person.client.recv(512)
         username, password = self._validate_auth_packet(auth_packet, person)
         salt = False
@@ -274,13 +275,15 @@ class Server(object):
         """
         client = person.client
         if self._login(person):
-            self.ai = AI(self)
             while True:
                 msg = decrypt(self.private_key, client.recv(512))
                 self.queue.put("Received Message: {0}".format(msg))
                 if msg.startswith('FILE:'):
                     path = msg.split(':')
                     self._serve_file(person, path[1])
+                elif msg.startswith('PATH:'):
+                    path = msg.split(':')[1]
+                    self._add_folder(path, person)
                 elif msg == "/quit":
                     message = (f"{person.name} has left the chat.")
                     self.broadcast(message, "")
@@ -300,7 +303,7 @@ class Server(object):
         while True:
             try:
                 self.queue.put("Server running...")
-                (request_socket, client_addr) = self.server.accept()
+                (request_socket, client_addr) = self.socket.accept()
                 client_key = request_socket.recv(833)
                 client_key = load_pem(client_key)
                 if isinstance(client_key, rsa.RSAPublicKey):
@@ -385,6 +388,24 @@ class Server(object):
         enc_file, length, key = encrypt_file(file)
         self._send_file(person, enc_file, length, key)
 
+    def _add_folder(self, path, person: Person):
+        """
+        Answer a client's request to populate the server browser window
+        """
+        files = []
+        folders = []
+        for item in os.listdir(path):
+            if not item.startswith('.'):
+                fqp = os.path.join(path, item)
+                if os.path.isdir(fqp):
+                    folders.append(item)
+                elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
+                    files.append(item)
+        folders = 'FOLDERS:' + (',').join(folders) + ':'
+        files = 'FILES:' + (',').join(files)
+        msg = encrypt(person.key, folders + files)
+        person.client.send(msg)
+
 
 class SlideShow(object):
     """Class for an Image slideshow"""
@@ -451,8 +472,8 @@ class SlideShow(object):
         :type delta: float
         """
         if self.started is True:
-            if OPTIONS['HOST_FOLDER'] != self.directory:
-                self.directory = OPTIONS['HOST_FOLDER']
+            if self.server.path != self.directory:
+                self.directory = self.server.path
                 self.images = os.listdir(self.directory)
                 self._show()
             self.time += delta
