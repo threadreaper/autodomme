@@ -28,11 +28,32 @@ swap_dict = {
 }
 
 
-def swap(line_list, i, item, new_item):
+def swap(line_list: list[str], i: int, item: str, new_item: str) -> None:
+    """
+    Swaps all occurences of item in a line read from a file with new_item.
+
+    :param line_list: List of lines read from a file.
+    :type line_list: list[str]
+    :param i: index number of line to update.
+    :type i: int
+    :param item: The string to replace.
+    :type item: str
+    :param new_item: The string to replace item with.
+    :type new_item: str
+    """
     line_list[i] = line_list[i].replace(item, new_item)
 
 
 def convert(lines: list[str]) -> list[str]:
+    """
+    Accepts a list of lines from a script file and returns them with all\
+    @tokens #tokens and anchors replaced with new syntax.
+
+    :param lines: A list of lines read from a script file.
+    :type lines: list[str]
+    :returns: A list of converted lines.
+    :rtype: list[str]
+    """
     for i, line in enumerate(lines):
         if '@StopStroking' in line:
             lines[i] = 'stopStroking()\n'
@@ -45,6 +66,16 @@ def convert(lines: list[str]) -> list[str]:
 
 
 def convert_step_2(lines: list[str]) -> list[str]:
+    """
+    Accepts a list of lines from a script file and returns them with all\
+    @DifferentAnswer lines and blank lines removed, and moves the @Info\
+    decorator to the beginning of the file if it exists.
+
+    :param lines: A list of lines read from a script file.
+    :type lines: list[str]
+    :returns: A list of converted lines.
+    :rtype: list[str]
+    """
     for i, line in enumerate(lines):
         if '@DifferentAnswer' in line:
             lines.remove(line)
