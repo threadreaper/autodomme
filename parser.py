@@ -4,6 +4,8 @@ import random
 from typing import Any
 from options import OPTIONS
 
+DB = 'teaseai.db'
+
 
 class Parser():
     """Script parser object"""
@@ -16,7 +18,7 @@ class Parser():
         :type script: file
         """
         self.script = script
-        self.conn = sqlite3.connect('teaseai.db')
+        self.conn = sqlite3.connect(DB)
         self.lines = self.read()
         self.index = -1
         self.rx_dict = {
@@ -39,7 +41,7 @@ class Parser():
         :return: A randomly selected synonym.
         :rtype: string
         """
-        con = sqlite3.connect('teaseai.db')
+        con = sqlite3.connect(DB)
         vocab = vocab.strip('_') if vocab.startswith('_') else vocab
         sql = 'WITH const as (SELECT SynID FROM vocab WHERE word = "%s"), \
                const2 as (SELECT SynID from synonyms where ParentSynID \
@@ -110,9 +112,9 @@ class Parser():
             match = re.match(self.rx_dict['anchor'], line)
             if match:
                 break
-        input = 'yeah'
+        user_input = 'yeah'
         for option in options:
-            if input in option[0]:
+            if user_input in option[0]:
                 self.index += option[2] - 1
                 return option[1]
 
@@ -126,7 +128,6 @@ class Parser():
         :return: String to output to chat.
         :rtype: str|None
         """
-        # line = self.lines[self.index]
         for key, rx in self.rx_dict.items():
             match = rx.findall(line)
             if len(match) > 0:
@@ -187,7 +188,7 @@ if __name__ == '__main__':
             print(line)
 
     def syn(terms: list) -> None:
-        conn = sqlite3.connect('teaseai.db')
+        conn = sqlite3.connect(DB)
         junk = []
         for term in terms:
             tuples = [(term, x) for x in terms if x != term]

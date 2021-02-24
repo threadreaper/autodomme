@@ -1,53 +1,60 @@
 @Info Domme asks if you're a tit or ass man, then shows you a random boobs or butt picture to edge to. She'll remember your answer if the module runs again, going straight to picking out an image for you to edge to. Written by 1885.
 stopStroking()
-Tell me something var(chat_name) 
+"Tell me something var(chat_name)"
 getFlag(AssMan) 
 getFlag(TitMan)
-Are you more of _an ass_ man
-Or do you prefer a nice pair of _boobs_?
-- **ass, butt, first, former, behind, rear, hienie, bum** In that case 
+"Are you more of _an ass_ man"
+"Or do you prefer a nice pair of _boobs_?"
+[ass, butt, first, former, behind, rear, hienie, bum]
+"In that case"
 goto(AssManConfirm)
-- **tit, boob, breast, last, latter** In that case 
+[tit, boob, breast, last, latter]
+"In that case"
 goto(TitManConfirm)
-- **both, decide, either, choose, and** You have to pick one var(chat_name) 
+[both, decide, either, choose, and]
+"You have to pick one var(chat_name)"
 loopAnswer()
 # TitManConfirm
-Here's some _boobs_ you can edge to right now _*grins*_ 
+"Here's some _boobs_ you can edge to right now _*grins*_"
 showBoobsImage()  
 setFlag(TitMan) 
 edge()
 stopStroking() 
-So you're a tit man...
-I'm gonna remember that var(chat_name) _*grins*_
+"So you're a tit man..."
+"I'm gonna remember that var(chat_name) _*grins*_"
 end()
 # AssManConfirm
-Here's _an ass_ you can edge to right now _*grins*_ 
+"Here's _an ass_ you can edge to right now _*grins*_"
 showButtImage()  
 setFlag(AssMan) 
 edge()
 stopStroking() 
-So you're _an ass_ man...
-I'm gonna remember that var(chat_name) _*grins*_
+"So you're _an ass_ man..."
+"I'm gonna remember that var(chat_name) _*grins*_"
 end()
 # AssMan
-Do you think this is a nice ass? 
+"Do you think this is a nice ass?"
 showButtImage() 
-- **yes** I'm glad to hear you think so
-- **no** That's too bad
-Cause you're gonna edge to it right now _*grins*_ 
+[yes]
+"I'm glad to hear you think so"
+[no]
+"That's too bad"
+"Cause you're gonna edge to it right now _*grins*_"
 edge()
 stopStroking() 
-I told you I'd remember you're _an ass_ man
-And this won't be the last time I remind you of that _*grins*_
+"I told you I'd remember you're _an ass_ man"
+"And this won't be the last time I remind you of that _*grins*_"
 end()
 # TitMan
-Do you think these are some nice _boobs_? 
+"Do you think these are some nice _boobs_?"
 showBoobsImage() 
-- **yes** I'm glad to hear you think so
-- **no** That's too bad
-Cause you're gonna edge to them right now _*grins*_ 
+[yes]
+"I'm glad to hear you think so"
+[no]
+"That's too bad"
+"Cause you're gonna edge to them right now _*grins*_"
 edge()
 stopStroking() 
-I told you I'd remember you're a tit man
-And this won't be the last time I remind you of that _*grins*_
+"I told you I'd remember you're a tit man"
+"And this won't be the last time I remind you of that _*grins*_"
 end()

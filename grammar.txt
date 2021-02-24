@@ -33,7 +33,7 @@ functions:
 @Info decorator must be the first line of the script
 anchor begins with # and must begin the line
 vocab surrounded with _vocab_  <- Markdown italic
-answers begin with - **answer** <- Markdown UL and italic
+answers surrounded with [answers]
 verbs utilize function notation
 every token except vocab tokens and var() calls must be on a separate line
 Dialog lines must be encapsulated with ""
