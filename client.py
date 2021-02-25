@@ -3,7 +3,7 @@
 from functools import lru_cache
 from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
-from threading import Thread
+from threading import Thread, Lock
 
 import PySimpleGUI as sG
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 
 from crypto import decrypt, decrypt_file, encrypt, get_key_pair, load_pem
 from options import OPTIONS
+import time
 
 
 class Session:
@@ -20,8 +21,8 @@ class Session:
         """Initialize the session."""
         self.srv_folder = ''
         self.online_users = []
-        self.browser_folders = []
-        self.browser_files = []
+        self.browser_folders = ['None']
+        self.browser_files = ['None']
 
 
 class Client:
@@ -47,9 +48,11 @@ class Client:
         self.private_key, self.public_key = get_key_pair()
         self.srv_key = rsa.RSAPublicKey
         self.client_socket = socket(AF_INET, SOCK_STREAM)
+        self.client_socket.settimeout(1)
         self.messages = []
         self.connected = False
         self.session = Session()
+        self.recv_lock = Lock()
 
     def connect(self) -> None:
         """Attempt to connect to a server"""
@@ -104,20 +107,24 @@ class Client:
         """Receive messages from the server."""
         while True:
             try:
+                self.recv_lock.acquire()
                 msg = self.client_socket.recv(self.buffer)
+                self.recv_lock.release()
                 if len(msg) == 0:
                     break
                 msg = decrypt(self.private_key, msg)
+                if msg.startswith('MSG'):
+                    msg = self._get_message(msg)
                 if msg.startswith('PATH'):
                     self._set_session_vars(msg)
                 elif msg.startswith('FOLDERS:'):
-                    stuff = msg.split(':')
+                    browse_data = msg.split(':')
                     try:
-                        self.session.browser_folders = stuff[1].split(',')
+                        self.session.browser_folders = browse_data[1].split(',')
                     except IndexError:
                         pass
                     try:
-                        self.session.browser_files = stuff[3].split(',')
+                        self.session.browser_files = browse_data[3].split(',')
                     except IndexError:
                         pass
                 elif msg.endswith('has joined the chat!'):
@@ -134,17 +141,35 @@ class Client:
                         self._get_file(msg).save(bio, format="PNG")
                         if self.window is not None:
                             self.window['IMAGE'].update(data=bio.getvalue())
-
                 else:
                     sG.cprint(msg)
             except OSError as error:
-                print('[EXCEPTION]', error)
-                break
+                if error != 'timed out':
+                    self.recv_lock.release()
+            finally:
+                time.sleep(0.1)
 
-    def _get_file(self, msg: str):
+    def _get_message(self, msg: str):
         """
-        Retrieves a file from the server given a message packet containing \
-            a header that indicates the server is preparing to send a file.
+        Retrives a long encrypted message from the server given a message
+        packet containing a header that indicates the server is preparing to
+        send a long message.
+
+        :param msg: Message packet starting with the MSG header.
+        :type msg: str
+        :return: The decrypted message.
+        :rtype: str
+        """
+        _, length, key = msg.split(':')
+        message = self.client_socket.recv(self.buffer)
+        while len(message) < int(length):
+            message += self.client_socket.recv(self.buffer)
+        return decrypt_file(message, key).decode()
+
+    def _get_file(self, msg: str, size: tuple[int, int]):
+        """
+        Retrieves a file from the server given a message packet containing
+        a header that indicates the server is preparing to send a file.
 
         :param msg: Message packet starting with the IMG header.
         :type msg: str
@@ -157,11 +182,11 @@ class Client:
             img += self.client_socket.recv(self.buffer)
         dec_img = BytesIO(decrypt_file(img, key))
         image = Image.open(dec_img)
-        image = ImageOps.pad(image, (980, 780))
+        image = ImageOps.pad(image, size)
         return image
 
     @lru_cache
-    def _request_file(self, filename: str):
+    def _request_file(self, filename: str, size: tuple[int, int]):
         """
         Request a file from the server.  Takes a path to file on the server
         and returns the file.
@@ -172,8 +197,9 @@ class Client:
         :rtype: bytes
         """
         self.send_message('FILE:%s' % filename)
-        msg = decrypt(self.private_key, self.client_socket.recv(self.buffer))
-        return self._get_file(msg)
+        msg = self.client_socket.recv(self.buffer)
+        msg = decrypt(self.private_key, msg)
+        return self._get_file(msg, size)
 
     def send_message(self, msg: str) -> None:
         """

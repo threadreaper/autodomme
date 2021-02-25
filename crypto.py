@@ -66,7 +66,7 @@ def hash_password(password: str, salt: bytes) -> str:
 
 def encrypt_file(filename: str) -> tuple[bytes, str, str]:
     """
-    Encrypts a file and returns the encrypted file, it's size in bytes and
+    Encrypts a file and returns the encrypted file, its size in bytes and
     the symmetric key used to encrypt it.
 
     :param filename: /path/to/file
@@ -80,6 +80,22 @@ def encrypt_file(filename: str) -> tuple[bytes, str, str]:
     fern = Fernet(f_key)
     out_file = fern.encrypt(file_data)
     return out_file, str(len(out_file)), f_key.decode()
+
+
+def encrypt_message(msg: str) -> tuple[bytes, str, str]:
+    """
+    Encrypts a long message and returns the encrypted message, its size
+    in bytes and the symmetric key used to encrypt it.
+
+    :param msg: The plaintext message to encrypt.
+    :type msg: str
+    :returns: Encrypted message, size in bytes and symmetric key
+    :rtype: tuple[bytes, str, str]
+    """
+    f_key = Fernet.generate_key()
+    fern = Fernet(f_key)
+    out_msg = fern.encrypt(msg.encode())
+    return out_msg, str(len(out_msg)), f_key.decode()
 
 
 def decrypt_file(file, fern_key):

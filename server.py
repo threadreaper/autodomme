@@ -10,13 +10,15 @@ from typing import Any
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
-    encrypt_file
+    encrypt_file, encrypt_message
 
 from ai import AI
 
 DB = 'teaseai.db'
 
 conn = sqlite3.connect(DB)
+
+BUFFER = 512
 
 
 class Person:
@@ -94,6 +96,8 @@ class Server(object):
                 self.queue.put('Error: Server is already running')
             else:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.socket.setsockopt(socket.SOL_SOCKET,
+                                       socket.SO_REUSEADDR, 1)
                 self.socket.bind(self.address)
                 self.socket.listen(5)
                 self.queue.put("Server Set-Up Successful")
@@ -103,6 +107,8 @@ class Server(object):
         except socket.error as error:
             self.queue.put("Error....Unable to Set Up Sockets with"
                            "{0}".format(error.strerror))
+            print("Error....Unable to Set Up Sockets with\
+                {0}".format(error.strerror))
             self.socket.close()
 
     def kill(self) -> None:
@@ -112,6 +118,7 @@ class Server(object):
             if self.slideshow.started is True:
                 self.slideshow.started = False
             self.started = False
+            self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
         else:
             self.queue.put("Error: No Server is running.")
@@ -168,7 +175,7 @@ class Server(object):
         prompts the user to re-enter them. Returns the username and password
         on success.
 
-        :param auth_packet: 512 bytes of encrypted data read from a socket
+        :param auth_packet: BUFFER bytes of encrypted data read from a socket
         containing a client's username and password
         :type auth_packet: bytes
         :param person: An instance of the `Person` class
@@ -181,7 +188,7 @@ class Server(object):
         except ValueError:
             msg = encrypt(person.key, 'User/Pass must not be empty.')
             person.client.send(msg)
-            auth_packet = person.client.recv(512)
+            auth_packet = person.client.recv(BUFFER)
             username, password = self._validate_auth_packet(auth_packet,
                                                             person)
         return username, password
@@ -199,7 +206,7 @@ class Server(object):
         if self._authenticate(person):
             msg = encrypt(person.key, 'True')
             person.client.send(msg)
-            name = person.client.recv(512)
+            name = person.client.recv(BUFFER)
             name = decrypt(self.private_key, name)
             person.set_name(name)
             message = (f"{name} has joined the chat!")
@@ -237,7 +244,7 @@ class Server(object):
         :rtype: bool
         """
         con = sqlite3.connect(DB)
-        auth_packet = person.client.recv(512)
+        auth_packet = person.client.recv(BUFFER)
         username, password = self._validate_auth_packet(auth_packet, person)
         salt = False
         while not salt:
@@ -247,7 +254,7 @@ class Server(object):
             if salt == '':
                 msg = encrypt(person.key, 'Invalid User')
                 person.client.send(msg)
-                auth_packet = person.client.recv(512)
+                auth_packet = person.client.recv(BUFFER)
                 username, password = self._validate_auth_packet(auth_packet,
                                                                 person)
         user = False
@@ -260,7 +267,7 @@ class Server(object):
             if not user:
                 msg = encrypt(person.key, 'Invalid Password')
                 person.client.send(msg)
-                auth_packet = person.client.recv(512)
+                auth_packet = person.client.recv(BUFFER)
                 username, password = self._validate_auth_packet(auth_packet,
                                                                 person)
         con.close()
@@ -276,8 +283,7 @@ class Server(object):
         client = person.client
         if self._login(person):
             while True:
-                msg = decrypt(self.private_key, client.recv(512))
-                self.queue.put("Received Message: {0}".format(msg))
+                msg = decrypt(self.private_key, client.recv(BUFFER))
                 if msg.startswith('FILE:'):
                     path = msg.split(':')
                     self._serve_file(person, path[1])
@@ -285,12 +291,11 @@ class Server(object):
                     path = msg.split(':')[1]
                     self._add_folder(path, person)
                 elif msg == "/quit":
-                    message = (f"{person.name} has left the chat.")
+                    message = ('%s has left the chat.' % person.name)
                     self.broadcast(message, "")
                     client.close()
                     self.clients.remove(person)
-                    self.queue.put(
-                        "Disconnected {0} from server".format(person.name))
+                    self.queue.put("Disconnected %s from server" % person.name)
                     break
                 else:
                     self.broadcast(msg, person.name + ": ")
@@ -357,10 +362,10 @@ class Server(object):
             self.queue.put("Failed to BroadCast message %s" % error)
 
         with io.BytesIO(enc_file) as file:
-            chunk = file.read(512)
+            chunk = file.read(BUFFER)
             while chunk:
                 person.client.send(chunk)
-                chunk = file.read(512)
+                chunk = file.read(BUFFER)
 
     def broadcast_image(self, image: str) -> None:
         """
@@ -401,10 +406,21 @@ class Server(object):
                     folders.append(item)
                 elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
                     files.append(item)
-        folders = 'FOLDERS:' + (',').join(folders) + ':'
-        files = 'FILES:' + (',').join(files)
-        msg = encrypt(person.key, folders + files)
-        person.client.send(msg)
+        folders = 'FOLDERS:' + ((',').join(folders)
+                                if folders else 'NULL') + ':'
+        files = 'FILES:' + ((',').join(files) if files else 'NULL')
+        if len(folders + files) > 446:
+            enc_msg, length, key = encrypt_message(folders + files)
+            msg = encrypt(person.key, 'MSG:%s:%s' % (length, key))
+            person.client.send(msg)
+            with io.BytesIO(enc_msg) as file:
+                chunk = file.read(BUFFER)
+                while chunk:
+                    person.client.send(chunk)
+                    chunk = file.read(BUFFER)
+        else:
+            msg = encrypt(person.key, folders + files)
+            person.client.send(msg)
 
 
 class SlideShow(object):

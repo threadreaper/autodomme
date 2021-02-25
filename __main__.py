@@ -8,6 +8,7 @@ from options import OPTIONS, open_options
 from server import Server
 from solitaire import MyGame, arcade
 import time as t
+from server_browser import ServerBrowser
 
 
 def main_window():
@@ -33,7 +34,7 @@ def main_window():
         [sG.T('Host Folder:', size=(40, 1), pad=(5, 10))],
         [sG.Input(OPTIONS['HOST_FOLDER'], size=(30, 1), pad=((5, 0), 8),
                   enable_events=True, k='HOST_FOLDER'),
-         sG.B('Browse', k='Browse0', metadata='folders', pad=(5, 8))],
+         sG.B('Browse', k='HOST_BROWSE', metadata='folders', pad=(5, 8))],
         [sG.B('', k='BACK', image_filename='icons/back.png'),
          sG.B('', k='PAUSE', image_filename='icons/pause.png'),
          sG.B('', k='PLAY', image_filename='icons/play.png'),
@@ -41,11 +42,27 @@ def main_window():
         [sG.Sizer(0, 100)]
     ]
 
+    try:
+        srv_folder = client.session.srv_folder if client.connected \
+            else 'Not connected'
+    except NameError:
+        srv_folder = 'Not connected'
+
+    server_media = [
+        [sG.T('Server Folder:', size=(40, 1), pad=(5, 10))],
+        [sG.Input(srv_folder, size=(30, 1), pad=((5, 0), 8),
+                  enable_events=True, k='SRV_FOLDER'),
+         sG.B('Browse', k='SRV_BROWSE', pad=(5, 8))],
+        [sG.B('', k='SRV_BACK', image_filename='icons/back.png'),
+         sG.B('', k='SRV_PAUSE', image_filename='icons/pause.png'),
+         sG.B('', k='SRV_PLAY', image_filename='icons/play.png'),
+         sG.B('', k='SRV_FORWARD', image_filename='icons/forward.png')],
+        [sG.Sizer(0, 100)]
+    ]
+
     tab1_layout = keys
     tab2_layout = media_player_panel
-    tab3_layout = [
-        [sG.T('Work In Progress!')]
-    ]
+    tab3_layout = server_media
 
     tab_group_layout = [[sG.Tab('Hot Keys', tab1_layout),
                          sG.Tab('My Media', tab2_layout),
@@ -86,7 +103,9 @@ def main_window():
     win['INPUT'].expand(expand_y=True)
     win['SERVER_STATUS'].expand(True)
     win['HOST_FOLDER'].expand(True, True)
-    win['Browse0'].expand(True)
+    win['SRV_FOLDER'].expand(True, True)
+    win['HOST_BROWSE'].expand(True)
+    win['SRV_BROWSE'].expand(True)
     for i in range(9):
         win.bind('<KP_%s>' % i, 'HOTKEY_%s' % i)
     win.bind('<Escape>', 'HIDE')
@@ -115,6 +134,7 @@ while True:
     elif event == 'Connect to Server':
         client = Client(window)
         client.connect()
+        window['SRV_FOLDER'].update(value=client.session.srv_folder)
     elif event == 'PLAY':
         slideshow.start()
     elif event == 'PAUSE':
@@ -136,10 +156,9 @@ while True:
         solitaire.setup()
         solitaire.set_location(x, y)
         arcade.run()
-    elif 'Browse' in event:
-        host_browse = FileBrowser(server.opt_get('folder'),
-                                  OPTIONS['THEME'][3:])
-        host_browse.show()
+    elif 'SRV_BROWSE' in event:
+        browser = ServerBrowser(client, OPTIONS['THEME'].split()[1])
+        browser.show()
     elif 'HOTKEY_' in event:
         if (
             client.connected is True
@@ -156,10 +175,9 @@ while True:
             if opt_event in OPTIONS.dict.keys():
                 OPTIONS[opt_event] = opt_vals[opt_event]
             if 'SRV' in opt_event:
-                print(opt_event.split('_')[1])
                 server.opt_set(opt_event.split('_')[1],
                                opt_vals[opt_event])
-            if str(opt_event).startswith('Browse'):
+            if opt_event == 'SERV_BROWSE':
                 filetype = opts[opt_event].metadata
                 browser = FileBrowser(server.opt_get('folder'),
                                       OPTIONS['THEME'][3:],
@@ -190,4 +208,6 @@ while True:
 
 if server.started is True:
     server.kill()
+if client.connected is True:
+    client.send_message('/quit')
 window.close()

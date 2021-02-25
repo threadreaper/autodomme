@@ -150,7 +150,7 @@ def open_options(server: object) -> sG.Window:
         [sG.T('Host Folder', size=(15, 1)),
          sG.In(server.opt_get('folder'), size=(20, 1),
                enable_events=True, k='SRV_folder'),
-         sG.B('Browse', k='Browse0', metadata='folders')],
+         sG.B('Browse', k='SERV_BROWSE', metadata='folders')],
         [sG.HorizontalSeparator()],
         [sG.T("Domme's Name:", size=(15, 1)),
          sG.In(server.opt_get('domme-name'), size=(20, 1),
