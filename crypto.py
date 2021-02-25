@@ -18,15 +18,15 @@ def get_key_pair() -> tuple[rsa.RSAPrivateKeyWithSerialization, bytes]:
 
 def encrypt(pub_key: rsa.RSAPublicKey, msg: str) -> bytes:
     """
-        Encrypt a chat message and return the encrypted string.
+    Encrypt a chat message and return the encrypted string.
 
-        :param pub_key: RSA public key to encrypt the message with.
-        :type pub_key: :class:`rsa.RSAPublicKey`
-        :param msg: Message to encrypt.
-        :type msg: string
-        :return: Encrypted message.
-        :rtype: bytes
-        """
+    :param pub_key: RSA public key to encrypt the message with.
+    :type pub_key: :class:`rsa.RSAPublicKey`
+    :param msg: Message to encrypt.
+    :type msg: string
+    :return: Encrypted message.
+    :rtype: bytes
+    """
     return pub_key.encrypt(msg.encode('utf8'),
                            padding.OAEP(mgf=padding.MGF1(
                                algorithm=hashes.SHA256()),
@@ -98,11 +98,27 @@ def encrypt_message(msg: str) -> tuple[bytes, str, str]:
     return out_msg, str(len(out_msg)), f_key.decode()
 
 
-def decrypt_file(file, fern_key):
-    """Decrypt a received file"""
+def decrypt_file(file: bytes, fern_key: bytes) -> bytes:
+    """
+    Decrypt a received file
+
+    :param file: The file to decrypt.
+    :type file: bytes
+    :param fern_key: The fernet key to decrypt with.
+    :type fern_key: bytes
+    :return: The decrypted file.
+    :rtype: bytes
+    """
     return Fernet(fern_key).decrypt(file)
 
 
 def load_pem(pub_key: bytes) -> rsa.RSAPublicKey:
-    """Serializes and returns an RSA public key"""
+    """
+    Serializes and returns an RSA public key
+
+    :param pub_key: The public key to serialize.
+    :type pub_key: bytes
+    :return: The serialized public key.
+    :rtype: `rsa.RSAPublicKey`
+    """
     return serialization.load_pem_public_key(pub_key)
