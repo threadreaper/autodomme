@@ -46,7 +46,7 @@ class Client:
         self.username = OPTIONS['USERNAME']
         self.password = OPTIONS['PASSWORD']
         self.private_key, self.public_key = get_key_pair()
-        self.srv_key = rsa.RSAPublicKey
+        self.srv_key = load_pem(self.public_key)
         self.client_socket = socket(AF_INET, SOCK_STREAM)
         self.client_socket.settimeout(1)
         self.messages = []
@@ -79,7 +79,8 @@ class Client:
                 print('Key handshake failure - connection rejected')
         else:
             if self.window is not None:
-                self.window['CLIENT_STATUS'].update('Error: already connected.')
+                self.window['CLIENT_STATUS'].update(
+                    'Error: already connected.')
 
     def _update_users(self) -> None:
         """Updates the online users list."""
@@ -120,7 +121,8 @@ class Client:
                 elif msg.startswith('FOLDERS:'):
                     browse_data = msg.split(':')
                     try:
-                        self.session.browser_folders = browse_data[1].split(',')
+                        self.session.browser_folders = \
+                            browse_data[1].split(',')
                     except IndexError:
                         pass
                     try:
@@ -138,7 +140,7 @@ class Client:
                     self._update_users()
                 elif msg.startswith('IMG'):
                     with BytesIO() as bio:
-                        self._get_file(msg).save(bio, format="PNG")
+                        self._get_file(msg, (980, 780)).save(bio, format="PNG")
                         if self.window is not None:
                             self.window['IMAGE'].update(data=bio.getvalue())
                 else:

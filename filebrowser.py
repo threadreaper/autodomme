@@ -53,7 +53,6 @@ class FileBrowser():
         self.window['FILES'].bind('<Double-Button-1>', '_double_clicked')
         self._add_folder(self.path)
 
-
     def _add_folder(self, path):
         """Add a folder to the tree - internal method only."""
         parent = '' if path == self.path else path

@@ -5,14 +5,14 @@ import binascii
 import hashlib
 
 
-def get_key_pair():
+def get_key_pair() -> tuple[rsa.RSAPrivateKeyWithSerialization, bytes]:
+    """Creates and returns an RSA key pair."""
     private_key = rsa.generate_private_key(public_exponent=65537,
                                            key_size=4096)
     pub = private_key.public_key()
     public_key = pub.public_bytes(
             encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+            format=serialization.PublicFormat.SubjectPublicKeyInfo)
     return private_key, public_key
 
 
@@ -33,12 +33,12 @@ def encrypt(pub_key: rsa.RSAPublicKey, msg: str) -> bytes:
                      algorithm=hashes.SHA256(), label=None))
 
 
-def decrypt(priv_key, msg: bytes) -> str:
+def decrypt(priv_key: rsa.RSAPrivateKeyWithSerialization, msg: bytes) -> str:
     """
     Decrypts a message and returns the plain text.
 
     :param priv_key: RSA private key to decrypt the message with.
-    :type priv_key: :class:`rsa.RSAPrivateKey`
+    :type priv_key: :class:`rsa.RSAPrivateKeyWithSerialization`
     :param msg: Message to decrypt
     :type msg: bytes
     :return: The decrypted message

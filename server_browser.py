@@ -5,29 +5,21 @@ from io import BytesIO
 
 import PySimpleGUI as sG
 
-from options import OPTIONS
 from client import Client
 from server import Server
-import threading
-
-
-def open_server_browser(client, path=None, history=None):
-    browser = ServerBrowser(client, OPTIONS['THEME'].split()[1], path, history)
-    threading.Thread(target=browser.show()).start()
 
 
 class ServerBrowser():
     """Class for custom file browser widget."""
 
-    def __init__(self, client: Client, theme, path=None, filetype=None,
+    def __init__(self, client: Client, theme: str, path: str = '',
                  history=None):
         """Args- path: full path to folder to launch the file browser in."""
         self.theme = theme
         sG.theme(self.theme)
         self.history = history
         self.client = client
-        self.path = self.client.session.srv_folder if path is None else path
-        self.filetype = filetype
+        self.path = self.client.session.srv_folder if path == '' else path
         self.treedata = sG.TreeData()
         folders, files = self._request_folder(self.path)
         self._add_folder(self.path, folders, files)
@@ -95,7 +87,7 @@ class ServerBrowser():
             else:
                 self.treedata.insert(parent, None, '...', [], None)
 
-    def _change_path(self, path):
+    def _change_path(self, path: str):
         self.history = self.path
         self.path = path
         self.treedata = sG.TreeData()
@@ -122,30 +114,20 @@ class ServerBrowser():
             event, values = self.window.read()
             if event in ['Cancel', None]:
                 break
-            if event == 'UP':
-                path = self.path.split('/')
-                if path[-1] == '':
-                    path.pop()
-                new_path = ''
-                new_path += ''.join(x + '/' for x in path if x != path[-1])
-                if new_path[-1] == '/' and len(new_path) > 1:
-                    new_path = new_path[0:-1]
-                self._change_path(new_path)
-            if event == 'BACK':
+            elif event == 'UP':
+                self._change_path(os.path.dirname(self.path))
+            elif event == 'BACK':
                 self._change_path(self.history)
-            if event == 'Select':
-                self.path = values['PATH']
+            elif event == 'Select':
                 break
             elif event == 'FILES_double_clicked':
-                node = values['FILES'][0]
-                node = self.treedata.tree_dict[node]
+                node = self.treedata.tree_dict[values['FILES'][0]]
                 if str(node.icon).startswith('folder'):
                     self._change_path(node.key)
-                elif str(node.icon).startswith('file'):
+                else:
                     self.client._request_file(str(node.key))
             elif len(values['FILES']) > 0:
-                node = values['FILES'][0]
-                node = self.treedata.tree_dict[node]
+                node = self.treedata.tree_dict[values['FILES'][0]]
                 if str(node.icon).startswith('file'):
                     self.preview(node.values[0])
         self.window.close()
@@ -156,6 +138,5 @@ if __name__ == "__main__":
     server.set_up_server()
     client = Client()
     client.connect()
-    while client.session.srv_folder == '':
-        pass
-    threading.Thread(target=open_server_browser(client), daemon=True).start()
+    browser = ServerBrowser(client, 'DarkAmber', server.opt_get('folder'))
+    browser.show()

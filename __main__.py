@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Main application loop for TeaseAI."""
+import time as t
+
 import PySimpleGUI as sG
 
 from client import Client
 from filebrowser import FileBrowser
 from options import OPTIONS, open_options
 from server import Server
-from solitaire import MyGame, arcade
-import time as t
 from server_browser import ServerBrowser
+from solitaire import MyGame, arcade
 
 
 def main_window():
