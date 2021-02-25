@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Custom filebrowser class and associated functions."""
+"""Custom server browser class and associated functions."""
 import os
 from io import BytesIO
 
@@ -7,15 +7,26 @@ import PySimpleGUI as sG
 
 from client import Client
 from server import Server
+from client import OPTIONS
 
 
 class ServerBrowser():
-    """Class for custom file browser widget."""
+    """Class for custom server browser widget."""
 
-    def __init__(self, client: Client, theme: str, path: str = '',
-                 history=None):
-        """Args- path: full path to folder to launch the file browser in."""
-        self.theme = theme
+    def __init__(self, client: Client, path: str = '',
+                 history: str = '') -> None:
+        """
+        Initializes the server browser.
+
+        :param client: An instance of the `Client` class.
+        :type client: :class:`Client`
+        :param path: The path to open the server browser in.
+        :type path: string
+        :param history: The previous path of the server browser to\
+            accomodate the functionality of the back button.
+        :type history: string
+        """
+        self.theme = OPTIONS['THEME'].split()[1]
         sG.theme(self.theme)
         self.history = history
         self.client = client
@@ -25,38 +36,35 @@ class ServerBrowser():
         self._add_folder(self.path, folders, files)
 
         self.layout = [
-            [
-                sG.B('', image_filename='icons/browse_back.png', k='BACK',
-                     disabled=(False, True)[self.history is None]),
-                sG.B('', image_filename='icons/up.png', k='UP',
-                     disabled=(False, True)[self.path == '/']),
-                sG.Input(self.path, size=(40, 1), text_color='#000000',
-                         k='PATH',
-                         disabled=(False, True)[self.history is None]),
-            ],
-            [
-                sG.Tree(
-                    data=self.treedata,
-                    headings=[],
-                    justification='left',
-                    num_rows=20,
-                    col0_width=40,
-                    key='FILES',
-                    enable_events=True,
-                ),
-                sG.Image(None, None, '#000000', (400, 400), k='IMAGE')
-            ],
+            [sG.B('', image_filename='icons/browse_back.png', k='BACK',
+                  disabled=(False, True)[self.history == '']),
+             sG.B('', image_filename='icons/up.png', k='UP',
+                  disabled=(False, True)[self.path == '/']),
+             sG.Input(self.path, size=(40, 1), text_color='#000000', k='PATH',
+                      disabled=(False, True)[self.history is None])],
+            [sG.Tree(data=self.treedata, headings=[], justification='left',
+                     num_rows=20, col0_width=40, k='FILES',
+                     enable_events=True),
+             sG.Image(None, None, '#000000', (400, 400), k='IMAGE')],
             [sG.Sizer(650, 1), sG.B('Select'), sG.B('Cancel')],
         ]
 
-        self.window = sG.Window(self.path,
-                                layout=self.layout, finalize=True)
+        self.window = sG.Window(self.path, layout=self.layout, finalize=True)
         self.window['IMAGE'].expand(True, True)
         self.preview_frame = self.window['IMAGE'].get_size()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
         self.window['FILES'].bind('<Double-Button-1>', '_double_clicked')
 
-    def _request_folder(self, path):
+    def _request_folder(self, path: str) -> tuple[list[str], list[str]]:
+        """
+        Request a listing of folder contents from the server and return a\
+            list of folders and files at the given path.
+
+        :param path: The path to request the contents of.
+        :type path: str
+        :returns: A list of folders and a list of files at the given path.
+        :rtype: tuple[list[str], list[str]]
+        """
         self.client.send_message('PATH:%s' % path)
         folders = self.client.session.browser_folders
         files = self.client.session.browser_files
@@ -67,8 +75,18 @@ class ServerBrowser():
         self.client.session.browser_files = ['None']
         return (folders, files)
 
-    def _add_folder(self, path, folders, files):
-        """Add a folder to the tree - internal method only."""
+    def _add_folder(self, path: str, folders: list[str],
+                    files: list[str]) -> None:
+        """
+        Add a folder to the tree.
+
+        :param path: The path to populate on the tree.
+        :type path: string
+        :param folders: The list of folders to add.
+        :type folders: list[str]
+        :param files: The list of files to add.
+        :type files: list[str]
+        """
         folder_icon = 'folder.png'
         parent = ''
         for folder in sorted(folders, key=str.lower):
@@ -87,7 +105,13 @@ class ServerBrowser():
             else:
                 self.treedata.insert(parent, None, '...', [], None)
 
-    def _change_path(self, path: str):
+    def _change_path(self, path: str) -> None:
+        """
+        Changes the path of the server browser.
+
+        :param path: The path to change to.
+        :type path: string
+        """
         self.history = self.path
         self.path = path
         self.treedata = sG.TreeData()
@@ -99,10 +123,15 @@ class ServerBrowser():
         self.window['BACK'].update(disabled=(
             False, True)[self.history is None])
 
-    def preview(self, img):
-        """Display an image in the preview pane."""
+    def preview(self, img: str) -> None:
+        """
+        Display an image in the preview pane.
+
+        :param img: Path to the image file to be displayed.
+        :type img: string
+        """
         self.client.recv_lock.acquire()
-        image = self.client._request_file(img, (400, 400))
+        image = self.client._request_file(img, self.preview_frame)
         self.client.recv_lock.release()
         with BytesIO() as bio:
             image.save(bio, format="PNG")
