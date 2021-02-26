@@ -42,6 +42,7 @@ class Client:
         self.address = (OPTIONS['SERVER_ADDRESS'], OPTIONS['SERVER_PORT'])
         self.buffer = 512
         self.window = window
+        self.media_player = self.window['MEDIA_PLAYER'].get_size()
         self.chat_name = OPTIONS['CHAT_NAME']
         self.username = OPTIONS['USERNAME']
         self.password = OPTIONS['PASSWORD']
@@ -54,33 +55,41 @@ class Client:
         self.session = Session()
         self.recv_lock = Lock()
 
+    def client_message(self, error: str) -> None:
+        """
+        Handles the output of messages from the client.
+
+        :param error: The error message.
+        :type error: str
+        """
+        if self.window is not None:
+            self.window['CLIENT_STATUS'].update(error)
+        else:
+            print(error)
+
     def connect(self) -> None:
         """Attempt to connect to a server"""
-        if self.connected is False:
+        if self.connected:
+            self.client_message('Error: already connected.')
+        else:
             self.client_socket.connect(self.address)
             self.client_socket.send(self.public_key)
             self.srv_key = load_pem(self.client_socket.recv(833))
             if isinstance(self.srv_key, rsa.RSAPublicKey):
-                authenticated = self._authenticate()
-                while authenticated != 'True':
-                    if not authenticated:
+                response = self._authenticate()
+                while response != 'True':
+                    if not response:
                         break
-                    authenticated = self._authenticate(authenticated)
-                if authenticated:
-                    if self.window is not None:
-                        self.window['CLIENT_STATUS'].update(
-                            'Connected to server: %s' %
-                            OPTIONS['SERVER_ADDRESS'])
+                    response = self._authenticate(response)
+                if response:
+                    self.client_message('Connected to server: %s' %
+                                        OPTIONS['SERVER_ADDRESS'])
                     receive_thread = Thread(target=self._receive_messages)
                     receive_thread.start()
                     self.send_message(self.chat_name)
                     self.connected = True
             else:
                 print('Key handshake failure - connection rejected')
-        else:
-            if self.window is not None:
-                self.window['CLIENT_STATUS'].update(
-                    'Error: already connected.')
 
     def _update_users(self) -> None:
         """Updates the online users list."""
@@ -104,6 +113,26 @@ class Client:
                 self.session.online_users.append(chunk)
         self._update_users()
 
+    def _folders_and_files(self, msg: str) -> None:
+        """
+        Passes retrieved folder and file information to the server browser\
+            object.
+
+        :param msg: A message packet from the server containing the folder and\
+            file information.
+        :type msg: string
+        """
+        browse_data = msg.split(':')
+        try:
+            self.session.browser_folders = \
+                browse_data[1].split(',')
+        except IndexError:
+            pass
+        try:
+            self.session.browser_files = browse_data[3].split(',')
+        except IndexError:
+            pass
+
     def _receive_messages(self) -> None:
         """Receive messages from the server."""
         while True:
@@ -116,38 +145,20 @@ class Client:
                 msg = decrypt(self.private_key, msg)
                 if msg.startswith('MSG'):
                     msg = self._get_message(msg)
-                if msg.startswith('PATH'):
+                elif msg.startswith('PATH'):
                     self._set_session_vars(msg)
                 elif msg.startswith('FOLDERS:'):
-                    browse_data = msg.split(':')
-                    try:
-                        self.session.browser_folders = \
-                            browse_data[1].split(',')
-                    except IndexError:
-                        pass
-                    try:
-                        self.session.browser_files = browse_data[3].split(',')
-                    except IndexError:
-                        pass
-                elif msg.endswith('has joined the chat!'):
-                    sG.cprint(msg)
-                    if msg.split()[0] != OPTIONS['CHAT_NAME']:
-                        self.session.online_users.append(msg.split()[0])
-                        self._update_users()
-                elif msg.endswith('has left the chat.'):
-                    sG.cprint(msg)
-                    self.session.online_users.remove(msg.split()[0])
-                    self._update_users()
+                    self._folders_and_files(msg)
                 elif msg.startswith('IMG'):
                     with BytesIO() as bio:
-                        self._get_file(msg, (980, 780)).save(bio, format="PNG")
+                        self._get_file(
+                            msg, self.media_player).save(bio, format="PNG")
                         if self.window is not None:
                             self.window['IMAGE'].update(data=bio.getvalue())
                 else:
                     sG.cprint(msg)
-            except OSError as error:
-                if error != 'timed out':
-                    self.recv_lock.release()
+            except OSError:
+                self.recv_lock.release()
             finally:
                 time.sleep(0.1)
 
@@ -166,7 +177,7 @@ class Client:
         message = self.client_socket.recv(self.buffer)
         while len(message) < int(length):
             message += self.client_socket.recv(self.buffer)
-        return decrypt_file(message, key).decode()
+        return decrypt_file(message, key.encode()).decode()
 
     def _get_file(self, msg: str, size: tuple[int, int]):
         """
@@ -182,7 +193,7 @@ class Client:
         img = self.client_socket.recv(self.buffer)
         while len(img) < int(length):
             img += self.client_socket.recv(self.buffer)
-        dec_img = BytesIO(decrypt_file(img, key))
+        dec_img = BytesIO(decrypt_file(img, key.encode()))
         image = Image.open(dec_img)
         image = ImageOps.pad(image, size)
         return image

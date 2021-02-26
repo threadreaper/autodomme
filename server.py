@@ -214,7 +214,8 @@ class Server(object):
             self.clients.append(person)
             self.client_lock.release()
             self.broadcast(message, "")
-            self._send_session_vars(person)
+            for person in self.clients:
+                self._send_session_vars(person)
             return True
         else:
             return False
