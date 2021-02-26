@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Client class and associated methods"""
+import time
 from functools import lru_cache
 from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
-from threading import Thread, Lock
+from threading import Lock, Thread
 
 import PySimpleGUI as sG
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -11,7 +12,6 @@ from PIL import Image, ImageOps
 
 from crypto import decrypt, decrypt_file, encrypt, get_key_pair, load_pem
 from options import OPTIONS
-import time
 
 
 class Session:
