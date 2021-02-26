@@ -83,7 +83,7 @@ class Server(object):
         self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
         self.queue = SimpleQueue()
-        self.slideshow = None
+        self.slideshow = SlideShow(self.path, self)
         self.ai = AI(self)
 
     def set_up_server(self) -> None:

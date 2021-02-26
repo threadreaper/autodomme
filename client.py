@@ -3,7 +3,7 @@
 import time
 from functools import lru_cache
 from io import BytesIO
-from socket import AF_INET, SOCK_STREAM, socket, SHUT_RDWR
+from socket import AF_INET, SOCK_STREAM, socket
 from threading import Lock, Thread
 from queue import SimpleQueue
 
@@ -87,17 +87,13 @@ class Client:
                 if response:
                     self.client_message('Connected to server: %s' %
                                         OPTIONS['SERVER_ADDRESS'])
-                    receive_thread = Thread(target=self._receive_messages, daemon=True)
+                    receive_thread = Thread(target=self._receive_messages,
+                                            daemon=True)
                     receive_thread.start()
                     self.send_message(self.chat_name)
                     self.connected = True
             else:
                 print('Key handshake failure - connection rejected')
-
-    def kill(self):
-        """Shuts down the client."""
-        # self.client_socket.shutdown(SHUT_RDWR)
-        self.client_socket.close()
 
     def _update_users(self) -> None:
         """Updates the online users list."""

@@ -219,5 +219,5 @@ if server.started is True:
     server.kill()
 if client.connected is True:
     client.send_message('/quit')
-    client.kill()
+    client.client_socket.close()
 window.close()
