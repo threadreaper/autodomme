@@ -5,6 +5,7 @@ from functools import lru_cache
 from io import BytesIO
 from socket import AF_INET, SOCK_STREAM, socket
 from threading import Lock, Thread
+from queue import SimpleQueue
 
 import PySimpleGUI as sG
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -42,7 +43,8 @@ class Client:
         self.address = (OPTIONS['SERVER_ADDRESS'], OPTIONS['SERVER_PORT'])
         self.buffer = 512
         self.window = window
-        self.media_player = self.window['MEDIA_PLAYER'].get_size()
+        if self.window is not None:
+            self.media_player = self.window['IMAGE'].get_size()
         self.chat_name = OPTIONS['CHAT_NAME']
         self.username = OPTIONS['USERNAME']
         self.password = OPTIONS['PASSWORD']
@@ -54,6 +56,7 @@ class Client:
         self.connected = False
         self.session = Session()
         self.recv_lock = Lock()
+        self.queue = SimpleQueue()
 
     def client_message(self, error: str) -> None:
         """
@@ -147,7 +150,7 @@ class Client:
                     msg = self._get_message(msg)
                 elif msg.startswith('PATH'):
                     self._set_session_vars(msg)
-                elif msg.startswith('FOLDERS:'):
+                if msg.startswith('FOLDERS:'):
                     self._folders_and_files(msg)
                 elif msg.startswith('IMG'):
                     with BytesIO() as bio:
@@ -156,7 +159,7 @@ class Client:
                         if self.window is not None:
                             self.window['IMAGE'].update(data=bio.getvalue())
                 else:
-                    sG.cprint(msg)
+                    self.queue.put(msg)
             except OSError:
                 self.recv_lock.release()
             finally:

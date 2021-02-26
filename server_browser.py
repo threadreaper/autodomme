@@ -137,6 +137,16 @@ class ServerBrowser():
             image.save(bio, format="PNG")
             self.window['IMAGE'].update(data=bio.getvalue())
 
+    def select_folder(self, values: dict):
+        if len(values['FILES']) > 0:
+            node = self.treedata.tree_dict[values['FILES'][0]]
+            if str(node.icon).startswith('folder'):
+                return values['FILES'][0]
+            else:
+                sG.popup_error('You must select a folder!')
+        else:
+            sG.popup_error('You must select a folder!')
+
     def show(self):
         """Show the file browser window."""
         while True:
@@ -148,7 +158,7 @@ class ServerBrowser():
             elif event == 'BACK':
                 self._change_path(self.history)
             elif event == 'Select':
-                break
+                return self.select_folder(values)
             elif event == 'FILES_double_clicked':
                 node = self.treedata.tree_dict[values['FILES'][0]]
                 if str(node.icon).startswith('folder'):
@@ -167,5 +177,8 @@ if __name__ == "__main__":
     server.set_up_server()
     client = Client()
     client.connect()
-    browser = ServerBrowser(client, 'DarkAmber', server.opt_get('folder'))
+    srv_folder = client.session.srv_folder
+    while srv_folder == '':
+        srv_folder = client.session.srv_folder
+    browser = ServerBrowser(client)
     browser.show()

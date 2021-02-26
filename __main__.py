@@ -52,7 +52,7 @@ def main_window():
     server_media = [
         [sG.T('Server Folder:', size=(40, 1), pad=(5, 10))],
         [sG.Input(srv_folder, size=(30, 1), pad=((5, 0), 8),
-                  enable_events=True, k='SRV_FOLDER'),
+                  disabled=True, k='SRV_FOLDER'),
          sG.B('Browse', k='SRV_BROWSE', pad=(5, 8))],
         [sG.B('', k='SRV_BACK', image_filename='icons/back.png'),
          sG.B('', k='SRV_PAUSE', image_filename='icons/pause.png'),
@@ -135,7 +135,10 @@ while True:
     elif event == 'Connect to Server':
         client = Client(window)
         client.connect()
-        window['SRV_FOLDER'].update(value=client.session.srv_folder)
+        srv_folder = ''
+        while srv_folder == '':
+            srv_folder = client.session.srv_folder
+        window['SRV_FOLDER'].update(value=srv_folder)
     elif event == 'PLAY':
         slideshow.start()
     elif event == 'PAUSE':
@@ -158,8 +161,10 @@ while True:
         solitaire.set_location(x, y)
         arcade.run()
     elif 'SRV_BROWSE' in event:
-        browser = ServerBrowser(client, OPTIONS['THEME'].split()[1])
-        browser.show()
+        browser = ServerBrowser(client, window['SRV_FOLDER'].get())
+        srv_folder = browser.show()
+        window['SRV_FOLDER'].update(srv_folder)
+        browser.window.close()
     elif 'HOTKEY_' in event:
         if (
             client.connected is True
@@ -181,7 +186,6 @@ while True:
             if opt_event == 'SERV_BROWSE':
                 filetype = opts[opt_event].metadata
                 browser = FileBrowser(server.opt_get('folder'),
-                                      OPTIONS['THEME'][3:],
                                       filetype)
                 browser.show()
                 opts['SRV_folder'].update(server.opt_get('folder'))
@@ -203,6 +207,9 @@ while True:
         opts.close()
     elif event != '__TIMEOUT__':
         print(f'Event: {event}')
+    if not client.queue.empty():
+        msg = client.queue.get(False)
+        sG.cprint(msg)
     if not server.queue.empty():
         status = server.queue.get(False)
         window['SERVER_STATUS'].update(status)
