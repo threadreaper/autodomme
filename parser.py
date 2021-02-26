@@ -7,7 +7,7 @@ from options import OPTIONS
 DB = 'teaseai.db'
 
 
-class Parser():
+class Parser(object):
     """Script parser object"""
 
     def __init__(self, script: str) -> None:
@@ -23,9 +23,8 @@ class Parser():
         self.index = -1
         self.rx_dict = {
             'function': re.compile(r'\S+\(.*\)'),
-            'option': re.compile(r'^-\s\*\*.*\*\*\s.*\n'),
+            'option': re.compile(r'^\[.*\]'),
             'anchor': re.compile(r'^#\s.*\n'),
-            'question': re.compile(r'\".*\?\"\s'),
             'string': re.compile(r'\".*\"'),
         }
         self.stroking = False
@@ -89,33 +88,129 @@ class Parser():
         """
         words = function.split('(', 1)
         args = words[1][:-1].split(',', 1)
-        for i, arg in enumerate(args):
-            args[i] = arg.strip()
+        args = [arg.strip() for arg in args]
         return (words[0], args)
 
-    def get_answer(self):
+    def getanswer(self, args: list[str]) -> str:
+        """Gets an answer to a question from the client and returns\
+            the AI's response"""
         options = []
         # TODO: prompt user after timeout
         # TODO: get input from the chat
         # TODO: resolve options to vocab words
-        if self.lines[self.index + 1].startswith('#'):
-            self.index += 2
-        if self.lines[self.index].startswith('#'):
-            self.index += 1
-        for i, line in enumerate(self.lines[self.index:]):
+        lines = self.lines[self.index:]
+        for i, line in enumerate(lines):
             match = re.match(self.rx_dict['option'], line)
             if match:
-                match = match.group().split('**')
-                options.append((match[1].split(', '),
-                                match[2].strip(), i))
+                line = line.lstrip('[').rstrip(']  \n')
+                options.append(line.split(', '))
+                options.append(lines[i + 1].rstrip('  \n'))
+                options.append(i + 1)
             match = re.match(self.rx_dict['anchor'], line)
             if match:
                 break
-        user_input = 'yeah'
-        for option in options:
-            if user_input in option[0]:
-                self.index += option[2] - 1
-                return option[1]
+        user_input = 'wtf'
+        for i, option in enumerate(options):
+            if type(option) == list and user_input in option:
+                self.index += options[i+2]
+                return options[i+1]
+        self.index -= 2
+        return '"Your response to my question seems meaningless."'
+
+    def goto(self, args: list[str]) -> None:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        anchor = args[0]
+        for i, line in enumerate(self.lines):
+            if anchor in line and line.startswith('#'):
+                self.index = i
+
+    def chance(self, args: list[str]) -> None:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        chance = args[0]
+        command = args[1]
+        if random.randint(0, 100) <= int(chance):
+            self.parse(command.strip('\''))
+
+    def startstroking(self, args: list[str]) -> str:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        self.stroking = True
+        return '\"%s\"' % self._get_synonym('_Start stroking._')
+
+    def stopstroking(self, args: list[str]) -> str:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        self.stroking = False
+        return '\"%s\"' % self._get_synonym('_Stop stroking._')
+
+    def setflag(self, args: list[str]) -> None:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        OPTIONS[args[0]] = True
+
+    def getflag(self, args: list[str]) -> None:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        keys = OPTIONS.dict.keys()
+        if args[0] in keys and OPTIONS[args[0]]:
+            self.goto([args[0]])
+
+    def loopanswer(self, args: list[str]) -> str:
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        for i, line in enumerate(self.lines):
+            if args[0] in line and line.startswith('#'):
+                self.index = i + 1
+        return self.getanswer([])
+
+    def edge(self, args):
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        return '\"%s\"' % self._get_synonym('_Edge._')
+
+    def end(self, args):
+        """
+        Jumps to a different position in the script.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        # TODO: pick up the next script
+        exit()
 
     def parse(self, line: str) -> Any:
         """
@@ -129,53 +224,12 @@ class Parser():
         """
         for key, rx in self.rx_dict.items():
             match = rx.findall(line)
-            if len(match) > 0:
-                if key == 'question':
-                    for item in match:
-                        self.parse('\"%s\"' % item.strip())
-                        self.parse('%s' % self.get_answer())
+            for item in match:
                 if key == 'function':
-                    for item in match:
-                        func, args = self._parse_function(match[0])
-                        if func == 'chance':
-                            if random.randint(0, 100) <= int(args[0]):
-                                self.parse(args[1])
-                        elif func == 'goto':
-                            for i, line in enumerate(self.lines):
-                                if args[0] in line and line.startswith('#'):
-                                    self.index = i
-                        elif func == 'startStroking':
-                            self.stroking = True
-                            return '\"%s\"' % \
-                                self._get_synonym('_Start stroking._')
-                        elif func == 'stopStroking':
-                            self.stroking = False
-                            return '\"%s\"' % \
-                                self._get_synonym('_Stop stroking._')
-                        elif func == 'setFlag':
-                            OPTIONS[args[0]] = True
-                            return None
-                        elif func == 'getFlag':
-                            keys = OPTIONS.dict.keys()
-                            if args[0] in keys and OPTIONS[args[0]]:
-                                self.lines.insert(self.index + 1, 'goto(%s)' %
-                                                  args[0])
-                            return None
-                        elif func == 'loopAnswer':
-                            for i, line in enumerate(self.lines):
-                                if args[0] in line and line.startswith('#'):
-                                    self.index = i + 1
-                            return self.get_answer()
-                        elif func == 'edge':
-                            # TODO: wait for edge confirmation from client
-                            return '\"%s\"' % \
-                                self._get_synonym('_Edge._')
-                        elif func == 'end':
-                            break
-                            # TODO: pick up new script
+                    func, args = self._parse_function(match[0])
+                    return eval('self.%s(%s)' % (func.lower(), args))
                 elif key == 'string':
-                    for item in match:
-                        return item.strip()
+                    return item.strip()
 
 
 if __name__ == '__main__':

@@ -1,11 +1,11 @@
-from parser import Parser
 import random
+from parser import Parser
 
 
-class AI():
+class AI(object):
     """Class for AI domme"""
 
-    def __init__(self, server) -> None:
+    def __init__(self, server: object) -> None:
         """
         Initializes the AI
 
