@@ -3,7 +3,7 @@
 import time
 from functools import lru_cache
 from io import BytesIO
-from socket import AF_INET, SOCK_STREAM, socket
+from socket import AF_INET, SOCK_STREAM, socket, SHUT_RDWR
 from threading import Lock, Thread
 from queue import SimpleQueue
 
@@ -87,12 +87,17 @@ class Client:
                 if response:
                     self.client_message('Connected to server: %s' %
                                         OPTIONS['SERVER_ADDRESS'])
-                    receive_thread = Thread(target=self._receive_messages)
+                    receive_thread = Thread(target=self._receive_messages, daemon=True)
                     receive_thread.start()
                     self.send_message(self.chat_name)
                     self.connected = True
             else:
                 print('Key handshake failure - connection rejected')
+
+    def kill(self):
+        """Shuts down the client."""
+        # self.client_socket.shutdown(SHUT_RDWR)
+        self.client_socket.close()
 
     def _update_users(self) -> None:
         """Updates the online users list."""
@@ -148,18 +153,21 @@ class Client:
                 msg = decrypt(self.private_key, msg)
                 if msg.startswith('MSG'):
                     msg = self._get_message(msg)
-                elif msg.startswith('PATH'):
+                    continue
+                if msg.startswith('PATH'):
                     self._set_session_vars(msg)
+                    continue
                 if msg.startswith('FOLDERS:'):
                     self._folders_and_files(msg)
+                    continue
                 elif msg.startswith('IMG'):
                     with BytesIO() as bio:
                         self._get_file(
                             msg, self.media_player).save(bio, format="PNG")
                         if self.window is not None:
                             self.window['IMAGE'].update(data=bio.getvalue())
-                else:
-                    self.queue.put(msg)
+                    continue
+                self.queue.put(msg)
             except OSError:
                 self.recv_lock.release()
             finally:

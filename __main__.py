@@ -7,7 +7,7 @@ import PySimpleGUI as sG
 from client import Client
 from filebrowser import FileBrowser
 from options import OPTIONS, open_options
-from server import Server
+from server import Server, SlideShow
 from server_browser import ServerBrowser
 from solitaire import MyGame, arcade
 
@@ -81,15 +81,10 @@ def main_window():
         [sG.TabGroup(tab_group_layout, k='TABS')]
     ]
 
-    media_player = [
-        [sG.Image(None, k='IMAGE', pad=(0, 0))]
-    ]
-
     layout = [
         [sG.Menu(main_menu, tearoff=False, pad=(0, 0)),
-         sG.Column(media_player, size=(980, 780),
-                   element_justification='center',
-                   background_color='#000000', pad=(0, 0)),
+         sG.Image(None, size=(980, 780), background_color='#000000',
+                  k='IMAGE', pad=(0, 0)),
          sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))],
         [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
                       size=(40, 2), pad=(5, (0, 5)), k='SERVER_STATUS'),
@@ -126,6 +121,8 @@ while True:
     delta = t.time() - time
     time = t.time()
     event, values = window.read(timeout=50)
+    if slideshow is not None:
+        slideshow.update(delta)
     if event in ["Exit", sG.WIN_CLOSED]:
         break
     elif event == 'Start Server':
@@ -139,13 +136,15 @@ while True:
         while srv_folder == '':
             srv_folder = client.session.srv_folder
         window['SRV_FOLDER'].update(value=srv_folder)
-    elif event == 'PLAY':
+    elif event == 'SRV_PLAY':
+        server.slideshow = SlideShow(window['SRV_FOLDER'].get(), server)
+        slideshow = server.slideshow
         slideshow.start()
-    elif event == 'PAUSE':
+    elif event == 'SRV_PAUSE':
         slideshow.stop()
-    elif event == 'BACK':
+    elif event == 'SRV_BACK':
         slideshow.back()
-    elif event == 'FORWARD':
+    elif event == 'SRV_FORWARD':
         slideshow.next()
     elif event == 'Submit':
         if client.connected is True:
@@ -187,8 +186,10 @@ while True:
                 filetype = opts[opt_event].metadata
                 browser = FileBrowser(server.opt_get('folder'),
                                       filetype)
-                browser.show()
-                opts['SRV_folder'].update(server.opt_get('folder'))
+                srv_folder = browser.show()
+                opts['SRV_folder'].update(value=srv_folder)
+                server.opt_set('folder', srv_folder)
+                browser.window.close()
             if 'HOTKEY_' in opt_event:
                 window[opt_event].update(
                     text=f"{opts[opt_event].get()}\n{opt_event[-1]}")
@@ -218,4 +219,5 @@ if server.started is True:
     server.kill()
 if client.connected is True:
     client.send_message('/quit')
+    client.kill()
 window.close()

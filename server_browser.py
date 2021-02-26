@@ -52,6 +52,8 @@ class ServerBrowser():
         self.window = sG.Window(self.path, layout=self.layout, finalize=True)
         self.window['IMAGE'].expand(True, True)
         self.preview_frame = self.window['IMAGE'].get_size()
+        if self.client.window is not None:
+            self.media_player = self.client.window['IMAGE'].get_size()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
         self.window['FILES'].bind('<Double-Button-1>', '_double_clicked')
 
@@ -137,15 +139,23 @@ class ServerBrowser():
             image.save(bio, format="PNG")
             self.window['IMAGE'].update(data=bio.getvalue())
 
-    def select_folder(self, values: dict):
-        if len(values['FILES']) > 0:
-            node = self.treedata.tree_dict[values['FILES'][0]]
-            if str(node.icon).startswith('folder'):
-                return values['FILES'][0]
-            else:
-                sG.popup_error('You must select a folder!')
+    def select_folder(self, values: dict) -> str:
+        """
+        Returns the selected folder.
+
+        :param values: The dict of values from the browser window.
+        :type values: dict
+        :return: The selected folder.
+        :rtype: string
+        """
+        if len(values['FILES']) <= 0:
+            return values['PATH']
+
+        node = self.treedata.tree_dict[values['FILES'][0]]
+        if str(node.icon).startswith('folder'):
+            return values['FILES'][0]
         else:
-            sG.popup_error('You must select a folder!')
+            return values['PATH']
 
     def show(self):
         """Show the file browser window."""
@@ -164,7 +174,13 @@ class ServerBrowser():
                 if str(node.icon).startswith('folder'):
                     self._change_path(node.key)
                 else:
-                    self.client._request_file(str(node.key))
+                    self.client.recv_lock.acquire()
+                    img = self.client._request_file(str(node.key),
+                                                    (980, 780))
+                    self.client.recv_lock.release()
+                    with BytesIO() as bio:
+                        img.save(bio, format="PNG")
+                        self.client.window['IMAGE'].update(data=bio.getvalue())
             elif len(values['FILES']) > 0:
                 node = self.treedata.tree_dict[values['FILES'][0]]
                 if str(node.icon).startswith('file'):
@@ -180,5 +196,5 @@ if __name__ == "__main__":
     srv_folder = client.session.srv_folder
     while srv_folder == '':
         srv_folder = client.session.srv_folder
-    browser = ServerBrowser(client)
+    browser = ServerBrowser(client, srv_folder)
     browser.show()

@@ -83,7 +83,7 @@ class Server(object):
         self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
         self.queue = SimpleQueue()
-        self.slideshow = SlideShow(self.path, self)
+        self.slideshow = None
         self.ai = AI(self)
 
     def set_up_server(self) -> None:
@@ -115,8 +115,6 @@ class Server(object):
         """Shuts down a running server."""
         if self.started is True:
             self.queue.put("Server shut down")
-            if self.slideshow.started is True:
-                self.slideshow.started = False
             self.started = False
             self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
@@ -400,13 +398,16 @@ class Server(object):
         """
         files = []
         folders = []
-        for item in os.listdir(path):
-            if not item.startswith('.'):
-                fqp = os.path.join(path, item)
-                if os.path.isdir(fqp):
-                    folders.append(item)
-                elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
-                    files.append(item)
+        try:
+            for item in os.listdir(path):
+                if not item.startswith('.'):
+                    fqp = os.path.join(path, item)
+                    if os.path.isdir(fqp):
+                        folders.append(item)
+                    elif item.endswith(('jpg', 'jpeg', 'gif', 'png', 'bmp')):
+                        files.append(item)
+        except PermissionError:
+            pass
         folders = 'FOLDERS:' + ((',').join(folders)
                                 if folders else 'NULL') + ':'
         files = 'FILES:' + ((',').join(files) if files else 'NULL')
@@ -449,7 +450,6 @@ class SlideShow(object):
                        if os.path.isfile(os.path.join(folder, f)) and
                        f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff',
                                            'bmp'))]
-
         self.index = 0
         self.time = 0
         self.server = server
@@ -458,6 +458,7 @@ class SlideShow(object):
     def start(self) -> None:
         """Start the slideshow."""
         self.started = True
+        self._show()
 
     def stop(self) -> None:
         """Stop the slideshow."""
@@ -465,7 +466,7 @@ class SlideShow(object):
 
     def _show(self) -> None:
         """Display the current slideshow image."""
-        image = os.path.join(self.directory, self.images[self.index])
+        image = self.images[self.index]
         self.server.broadcast_image(image)
 
     def next(self) -> None:
@@ -474,11 +475,13 @@ class SlideShow(object):
             self.index = 0
         else:
             self.index += 1
+        self.time = 0
         self._show()
 
     def back(self) -> None:
         """Display the previous slide."""
         self.index -= 1
+        self.time = 0
         self._show()
 
     def update(self, delta: float) -> None:
@@ -489,12 +492,8 @@ class SlideShow(object):
         :type delta: float
         """
         if self.started is True:
-            if self.server.path != self.directory:
-                self.directory = self.server.path
-                self.images = os.listdir(self.directory)
-                self._show()
             self.time += delta
-            if self.time > 5000:
+            if self.time > 5:
                 self.time = 0
                 self.next()
 

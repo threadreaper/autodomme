@@ -111,6 +111,24 @@ class FileBrowser():
             del img
             self.window['IMAGE'].update(data=bio.getvalue())
 
+    def select_folder(self, values: dict) -> str:
+        """
+        Returns the selected folder.
+
+        :param values: The dict of values from the browser window.
+        :type values: dict
+        :return: The selected folder.
+        :rtype: string
+        """
+        if len(values['FILES']) <= 0:
+            return values['PATH']
+
+        node = self.treedata.tree_dict[values['FILES'][0]]
+        if str(node.icon).startswith('folder'):
+            return values['FILES'][0]
+        else:
+            return values['PATH']
+
     def show(self):
         """Show the file browser window."""
         while True:
@@ -122,8 +140,7 @@ class FileBrowser():
             if event == 'BACK':
                 self._change_path(self.history)
             if event == 'Select':
-                OPTIONS['HOST_FOLDER'] = values['PATH']
-                break
+                return self.select_folder(values)
             elif event == 'FILES_double_clicked':
                 node = values['FILES'][0]
                 node = self.treedata.tree_dict[node]
