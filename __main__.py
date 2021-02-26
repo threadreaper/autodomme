@@ -44,8 +44,7 @@ def main_window():
     ]
 
     try:
-        srv_folder = client.session.srv_folder if client.connected \
-            else 'Not connected'
+        srv_folder = client.session.srv_folder
     except NameError:
         srv_folder = 'Not connected'
 

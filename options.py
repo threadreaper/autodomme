@@ -87,7 +87,7 @@ def open_options(server: object) -> sG.Window:
          sG.In(OPTIONS['SERVER_PORT'], size=(20, 1), enable_events=True,
                k='SERVER_PORT')],
         [sG.HorizontalSeparator()],
-        [sG.Checkbox('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'],
+        [sG.CB('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'],
                      k='RANDOMIZE', tooltip='When enabled, randomizes the \
                      order of image slideshows', enable_events=True)],
         [sG.T('Slideshow Advances:')],
@@ -158,10 +158,10 @@ def open_options(server: object) -> sG.Window:
                k='SRV_domme-name', enable_events=True)],
         [sG.HorizontalSeparator()],
         [sG.T('Slideshow Options')],
-        [sG.Checkbox('Randomize Order',
-                     default=(False, True)[server.opt_get('randomize') == '1'],
-                     k='SRV_randomize', enable_events=True)],
-        [sG.Checkbox('Include Subfolders',
+        [sG.CB('Randomize Order',
+               default=(False, True)[server.opt_get('randomize') == '1'],
+               k='SRV_randomize', enable_events=True)],
+        [sG.CB('Include Subfolders',
                      default=(False, True)[server.opt_get('subfolders') == '1'],
                      k='SRV_subfolders', enable_events=True)]
     ]
