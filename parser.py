@@ -92,8 +92,13 @@ class Parser(object):
         return (words[0], args)
 
     def getanswer(self, args: list[str]) -> str:
-        """Gets an answer to a question from the client and returns\
-            the AI's response"""
+        """
+        Gets an answer to a question from the client and returns\
+            the AI's response
+
+        :param args: A list of arguments to be passed to the function.
+        :type args: list[str]
+        """
         options = []
         # TODO: prompt user after timeout
         # TODO: get input from the chat
