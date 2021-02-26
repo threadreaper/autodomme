@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""Script parser for the AI domme"""
 import re
 import sqlite3
 import random
