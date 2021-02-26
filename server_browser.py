@@ -5,9 +5,8 @@ from io import BytesIO
 
 import PySimpleGUI as sG
 
-from client import Client
+from client import Client, OPTIONS
 from server import Server
-from client import OPTIONS
 
 
 class ServerBrowser():

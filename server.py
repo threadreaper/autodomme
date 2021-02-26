@@ -4,6 +4,7 @@ import io
 import os
 import socket
 import sqlite3
+import random
 from queue import SimpleQueue
 from threading import Lock, Thread
 from typing import Any
@@ -445,18 +446,34 @@ class SlideShow(object):
         :type server: :class: `Server`
         """
         self.directory = folder
-        files = os.listdir(folder)
-        self.images = [os.path.join(folder, f) for f in files
-                       if os.path.isfile(os.path.join(folder, f)) and
-                       f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff',
-                                           'bmp'))]
         self.index = 0
         self.time = 0
         self.server = server
+        self.randomize = self.server.opt_get('randomize')
         self.started = False
+        self.images = []
+
+    def _add_folder(self, folder: str) -> None:
+        """
+        Grabs all images from the given folder and adds them to the slideshow.
+        Runs recursively if "Include subfolders" option is checked.
+
+        :param folder: The folder to add images from.
+        :type folder: string
+        """
+        images = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
+                  if os.path.isfile(os.path.join(folder, f)) and
+                  f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
+        folders = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
+                   if os.path.isdir(os.path.join(folder, f))]
+        self.images += images
+        if self.server.opt_get('subfolders') == '1':
+            for folder in folders:
+                self._add_folder(folder)
 
     def start(self) -> None:
         """Start the slideshow."""
+        self._add_folder(self.directory)
         self.started = True
         self._show()
 
@@ -471,17 +488,18 @@ class SlideShow(object):
 
     def next(self) -> None:
         """Advance the slideshow to the next slide."""
-        if self.index + 1 == len(self.images):
-            self.index = 0
+        if self.server.opt_get('randomize') == '1':
+            self.index = random.randint(0, len(self.images) - 1)
         else:
-            self.index += 1
-        self.time = 0
+            if self.index + 1 == len(self.images):
+                self.index = 0
+            else:
+                self.index += 1
         self._show()
 
     def back(self) -> None:
         """Display the previous slide."""
         self.index -= 1
-        self.time = 0
         self._show()
 
     def update(self, delta: float) -> None:
@@ -493,7 +511,7 @@ class SlideShow(object):
         """
         if self.started is True:
             self.time += delta
-            if self.time > 5:
+            if self.time > 3:
                 self.time = 0
                 self.next()
 

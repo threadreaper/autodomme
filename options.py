@@ -152,9 +152,18 @@ def open_options(server: object) -> sG.Window:
                enable_events=True, k='SRV_folder'),
          sG.B('Browse', k='SERV_BROWSE', metadata='folders')],
         [sG.HorizontalSeparator()],
+        [sG.T('Domme Options:')],
         [sG.T("Domme's Name:", size=(15, 1)),
          sG.In(server.opt_get('domme-name'), size=(20, 1),
                k='SRV_domme-name', enable_events=True)],
+        [sG.HorizontalSeparator()],
+        [sG.T('Slideshow Options')],
+        [sG.Checkbox('Randomize Order',
+                     default=(False, True)[server.opt_get('randomize') == '1'],
+                     k='SRV_randomize', enable_events=True)],
+        [sG.Checkbox('Include Subfolders',
+                     default=(False, True)[server.opt_get('subfolders') == '1'],
+                     k='SRV_subfolders', enable_events=True)]
     ]
 
     tab_group_layout = [[sG.Tab('General', general_options),

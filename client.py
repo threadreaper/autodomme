@@ -128,8 +128,7 @@ class Client:
         """
         browse_data = msg.split(':')
         try:
-            self.session.browser_folders = \
-                browse_data[1].split(',')
+            self.session.browser_folders = browse_data[1].split(',')
         except IndexError:
             pass
         try:
@@ -149,7 +148,6 @@ class Client:
                 msg = decrypt(self.private_key, msg)
                 if msg.startswith('MSG'):
                     msg = self._get_message(msg)
-                    continue
                 if msg.startswith('PATH'):
                     self._set_session_vars(msg)
                     continue
@@ -182,8 +180,10 @@ class Client:
         """
         _, length, key = msg.split(':')
         message = self.client_socket.recv(self.buffer)
+        self.recv_lock.acquire()
         while len(message) < int(length):
             message += self.client_socket.recv(self.buffer)
+        self.recv_lock.release()
         return decrypt_file(message, key.encode()).decode()
 
     def _get_file(self, msg: str, size: tuple[int, int]):

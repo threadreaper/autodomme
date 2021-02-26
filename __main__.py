@@ -203,11 +203,7 @@ while True:
                 opts = open_options(server)
                 for expired in old:
                     expired.close()
-            else:
-                print(f'Event: {opt_event}')
         opts.close()
-    elif event != '__TIMEOUT__':
-        print(f'Event: {event}')
     if not client.queue.empty():
         msg = client.queue.get(False)
         sG.cprint(msg)
