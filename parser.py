@@ -68,12 +68,12 @@ class Parser(object):
             regex = re.compile(r'\_[\w\*]*_')
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
-                    lines[i] = line.replace(hit, self._get_synonym(hit))
+                    lines[i] = lines[i].replace(hit, self._get_synonym(hit))
             regex = re.compile(r'var\(\w+_*\w*\)')
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
                     args = self._parse_function(hit)[1]
-                    lines[i] = line.replace(hit, OPTIONS[args[0].upper()])
+                    lines[i] = lines[i].replace(hit, OPTIONS[args[0].upper()])
         return lines
 
     def _parse_function(self, function: str):
@@ -116,7 +116,7 @@ class Parser(object):
             match = re.match(self.rx_dict['anchor'], line)
             if match:
                 break
-        user_input = 'wtf'
+        user_input = 'no'
         for i, option in enumerate(options):
             if type(option) == list and user_input in option:
                 self.index += options[i+2]
