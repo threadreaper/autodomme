@@ -3,8 +3,8 @@ stopStroking()
 "Tell me something var(chat_name)"
 getFlag(AssMan) 
 getFlag(TitMan)
-"Are you more of _an ass_ man"
-"Or do you prefer a nice pair of _boobs_?"
+"Are you more of _an ass_ man or do you prefer a nice pair of _boobs_?"
+getAnswer()
 [ass, butt, first, former, behind, rear, hienie, bum]
 "In that case"
 goto(AssManConfirm)
@@ -34,7 +34,8 @@ stopStroking()
 end()
 # AssMan
 "Do you think this is a nice ass?"
-showButtImage() 
+showButtImage()
+getAnswer()
 [yes]
 "I'm glad to hear you think so"
 [no]
@@ -47,7 +48,8 @@ stopStroking()
 end()
 # TitMan
 "Do you think these are some nice _boobs_?"
-showBoobsImage() 
+showBoobsImage()
+getAnswer()
 [yes]
 "I'm glad to hear you think so"
 [no]

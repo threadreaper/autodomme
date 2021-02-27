@@ -556,7 +556,6 @@ class AI(object):
             self.parser.index += 1
 
 
-
 if __name__ == '__main__':
     server = Server()
     server.set_up_server()

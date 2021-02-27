@@ -7,11 +7,10 @@ import random
 from typing import Any
 from options import OPTIONS
 
-
 DB = 'teaseai.db'
 
 
-class Parser(object):
+class Parser():
     """Script parser object"""
 
     def __init__(self, script: str, server: object = None) -> None:
@@ -70,7 +69,7 @@ class Parser(object):
             lines = file.readlines()
             regex = re.compile(r'^@|^\s')
             lines = [line for line in lines if not regex.search(line)]
-            regex = re.compile(r'\_[\w\*]*_')
+            regex = re.compile(r'_.?\w*\s?\w*.?_')
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
                     lines[i] = lines[i].replace(hit, self._get_synonym(hit))
@@ -121,7 +120,7 @@ class Parser(object):
             match = re.match(self.rx_dict['anchor'], line)
             if match:
                 break
-        user_input = 'no'
+        user_input = 'ass'
         for i, option in enumerate(options):
             if type(option) == list and user_input in option:
                 self.index += options[i+2]
@@ -234,8 +233,23 @@ class Parser(object):
         """
         folder = OPTIONS['BUTTS_FOLDER']
         images = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
-                  if os.path.isfile(os.path.join(OPTIONS['BUTTS_FOLDER'], f))
-                  and f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
+                  if os.path.isfile(os.path.join(folder, f)) and f.lower(
+                  ).endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
+        image = images[random.randint(0, len(images) - 1)]
+        self.server.broadcast_image(image)
+
+    def showboobsimage(self, args: list[str]) -> None:
+        """
+        Randomly selects an image from the user's selected "butts" directory
+        and displays it in the client.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        folder = OPTIONS['BOOBS_FOLDER']
+        images = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
+                  if os.path.isfile(os.path.join(folder, f)) and f.lower(
+                  ).endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
         image = images[random.randint(0, len(images) - 1)]
         self.server.broadcast_image(image)
 
@@ -260,7 +274,9 @@ class Parser(object):
 
 
 if __name__ == '__main__':
-    parser = Parser('Scripts/Module/AssOrTitsMan_EDGING.txt')
+    from server import Server
+    server = Server()
+    parser = Parser('Scripts/Module/AssOrTitsMan_EDGING.txt', server)
     while parser.index <= len(parser.lines) - 2:
         parser.index += 1
         line = parser.parse(parser.lines[parser.index])

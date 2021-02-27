@@ -90,8 +90,8 @@ def open_options(server: object) -> sG.Window:
                k='SERVER_PORT')],
         [sG.HorizontalSeparator()],
         [sG.CB('Randomize Slideshow Order', default=OPTIONS['RANDOMIZE'],
-                     k='RANDOMIZE', tooltip='When enabled, randomizes the \
-                     order of image slideshows', enable_events=True)],
+               k='RANDOMIZE', tooltip='When enabled, randomizes the \
+                order of image slideshows', enable_events=True)],
         [sG.T('Slideshow Advances:')],
         [sG.Radio('Manually', "ADV_METHOD", enable_events=True,
                   default=OPTIONS['ADV_METHOD'] == 'ADV_METHOD_MANUAL',
@@ -174,8 +174,8 @@ def open_options(server: object) -> sG.Window:
                default=(False, True)[server.opt_get('randomize') == '1'],
                k='SRV_randomize', enable_events=True)],
         [sG.CB('Include Subfolders',
-                     default=(False, True)[server.opt_get('subfolders') == '1'],
-                     k='SRV_subfolders', enable_events=True)]
+               default=(False, True)[server.opt_get('subfolders') == '1'],
+               k='SRV_subfolders', enable_events=True)]
     ]
 
     tab_group_layout = [[sG.Tab('General', general_options),
