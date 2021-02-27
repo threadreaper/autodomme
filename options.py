@@ -144,10 +144,10 @@ def open_options(server: object) -> sG.Window:
     local_media_options = [
         [sG.T('Local Media Options')],
         [sG.T(' Boobs Directory:')],
-        [sG.B('', image_filename='icons/folder.png', k='BROWSE_BOOBS'),
+        [sG.B('', image_filename='icons/browse_folder.png', k='BROWSE_BOOBS'),
          sG.In(OPTIONS['BOOBS_FOLDER'], k='BOOBS_FOLDER', disabled=True)],
         [sG.T(' Butts Directory:')],
-        [sG.B('', image_filename='icons/folder.png', k='BROWSE_BUTTS'),
+        [sG.B('', image_filename='icons/browse_folder.png', k='BROWSE_BUTTS'),
          sG.In(OPTIONS['BUTTS_FOLDER'], k='BUTTS_FOLDER', disabled=True)]
     ]
 

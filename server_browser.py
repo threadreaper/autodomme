@@ -88,7 +88,7 @@ class ServerBrowser():
         :param files: The list of files to add.
         :type files: list[str]
         """
-        folder_icon = 'folder.png'
+        folder_icon = 'icons/folder.png'
         parent = ''
         for folder in sorted(folders, key=str.lower):
             fqp = os.path.join(path, folder)
@@ -97,7 +97,7 @@ class ServerBrowser():
                                      icon=folder_icon)
             else:
                 self.treedata.insert(parent, None, '...', [], None)
-        file_icon = 'file.png'
+        file_icon = 'icons/file.png'
         for file in sorted(files):
             fqp = os.path.join(path, file)
             if file != 'NULL':

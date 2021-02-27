@@ -133,8 +133,8 @@ class Server(object):
         :rtype: string
         """
         con = sqlite3.connect(DB)
-        for row in con.execute("SELECT setting FROM options WHERE name = \
-                               ?", (opt, )):
+        for row in con.execute("SELECT setting FROM options WHERE name = ?",
+                               (opt, )):
             con.close()
             return row[0]
 
