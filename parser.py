@@ -78,6 +78,12 @@ class Parser():
                 for hit in regex.findall(line):
                     args = self._parse_function(hit)[1]
                     lines[i] = lines[i].replace(hit, OPTIONS[args[0].upper()])
+            regex = re.compile(r'randint\(\d+, \d+\)')
+            for i, line in enumerate(lines):
+                for hit in regex.findall(line):
+                    args = self._parse_function(hit)[1]
+                    lines[i] = lines[i].replace(
+                        hit, str(random.randint(int(args[0]), int(args[1]))))
         return lines
 
     def _parse_function(self, function: str):
@@ -120,7 +126,7 @@ class Parser():
             match = re.match(self.rx_dict['anchor'], line)
             if match:
                 break
-        user_input = 'ass'
+        user_input = 'yes'
         for i, option in enumerate(options):
             if type(option) == list and user_input in option:
                 self.index += options[i+2]
@@ -253,6 +259,15 @@ class Parser():
         image = images[random.randint(0, len(images) - 1)]
         self.server.broadcast_image(image)
 
+    def randint(self, args: list[str]) -> int:
+        """
+        Generates a random number.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        return random.randint(int(args[0]), int(args[1]))
+
     def parse(self, line: str) -> Any:
         """
         Parses a line of a script.  Returns output if any is necessary.
@@ -274,14 +289,6 @@ class Parser():
 
 
 if __name__ == '__main__':
-    from server import Server
-    server = Server()
-    parser = Parser('Scripts/Module/AssOrTitsMan_EDGING.txt', server)
-    while parser.index <= len(parser.lines) - 2:
-        parser.index += 1
-        line = parser.parse(parser.lines[parser.index])
-        if line and line.startswith('"'):
-            print(line)
 
     def syn(terms: list) -> None:
         """
@@ -300,5 +307,14 @@ if __name__ == '__main__':
 
         for x in junk:
             conn.execute('INSERT INTO synonyms(ParentSynID, SynID) \
-                         VALUES(?, ?)', (x[0], x[1]))
+                            VALUES(?, ?)', (x[0], x[1]))
         conn.commit()
+
+    from server import Server
+    server = Server()
+    parser = Parser('Scripts/Module/AssOrTitsMan_EDGING.txt', server)
+    while parser.index <= len(parser.lines) - 2:
+        parser.index += 1
+        line = parser.parse(parser.lines[parser.index])
+        if line and line.startswith('"'):
+            print(line)

@@ -33,13 +33,15 @@ stopStroking()
 "I'm gonna remember that var(chat_name) _*grins*_"
 end()
 # AssMan
-"Do you think this is a nice ass?"
-showButtImage()
+"Do you think this is a nice _ass_?"
 getAnswer()
+showButtImage()
 [yes]
 "I'm glad to hear you think so"
+goto(edgeToAss)
 [no]
 "That's too bad"
+# edgeToAss
 "Cause you're gonna edge to it right now _*grins*_"
 edge()
 stopStroking() 
@@ -48,12 +50,14 @@ stopStroking()
 end()
 # TitMan
 "Do you think these are some nice _boobs_?"
-showBoobsImage()
 getAnswer()
+showBoobsImage()
 [yes]
 "I'm glad to hear you think so"
+goto(edgeToBoobs)
 [no]
 "That's too bad"
+# edgeToBoobs
 "Cause you're gonna edge to them right now _*grins*_"
 edge()
 stopStroking() 

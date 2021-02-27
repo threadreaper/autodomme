@@ -27,7 +27,9 @@ functions:
  -DONE var - get the value of an option variable
 -DONE startStroking - tell sub to start stroking and set the flag that sub is stroking
 -DONE stopStroking - tell sub to stop stroking and set the flag that sub is not stroking
+-DOND randint - 2 params, generate a random integer between the two integer params and insert it in place of the call
 -DONE end - marks the end of a script
+
 
 
 @Info decorator must be the first line of the script
