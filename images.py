@@ -130,3 +130,6 @@ class SlideShow():
                 'SLIDESHOW_INCREMENT'] < self.time:
             self.time = 0
             self.next()
+
+
+parse_images('/home/michael/projects/teaseai/icons')

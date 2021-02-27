@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Script parser for the AI domme"""
 import re
+import os
 import sqlite3
 import random
 from typing import Any
 from options import OPTIONS
+
 
 DB = 'teaseai.db'
 
@@ -12,13 +14,16 @@ DB = 'teaseai.db'
 class Parser(object):
     """Script parser object"""
 
-    def __init__(self, script: str) -> None:
+    def __init__(self, script: str, server: object = None) -> None:
         """
         Initializes the parser.
 
         :param script: The script file to parse.
         :type script: file
+        :param server: An instance of the `Server` object.
+        :type server: :class:`Server`
         """
+        self.server = server
         self.script = script
         self.conn = sqlite3.connect(DB)
         self.lines = self.read()
@@ -200,7 +205,7 @@ class Parser(object):
                 self.index = i + 1
         return self.getanswer([])
 
-    def edge(self, args):
+    def edge(self, args: list[str]):
         """
         Jumps to a different position in the script.
 
@@ -209,7 +214,7 @@ class Parser(object):
         """
         return '\"%s\"' % self._get_synonym('_Edge._')
 
-    def end(self, args):
+    def end(self, args: list[str]):
         """
         Jumps to a different position in the script.
 
@@ -218,6 +223,21 @@ class Parser(object):
         """
         # TODO: pick up the next script
         exit()
+
+    def showbuttimage(self, args: list[str]) -> None:
+        """
+        Randomly selects an image from the user's selected "butts" directory
+        and displays it in the client.
+
+        :param args: A list of arguments for the function.
+        :type args: list[str]
+        """
+        folder = OPTIONS['BUTTS_FOLDER']
+        images = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
+                  if os.path.isfile(os.path.join(OPTIONS['BUTTS_FOLDER'], f))
+                  and f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
+        image = images[random.randint(0, len(images) - 1)]
+        self.server.broadcast_image(image)
 
     def parse(self, line: str) -> Any:
         """
@@ -240,7 +260,7 @@ class Parser(object):
 
 
 if __name__ == '__main__':
-    parser = Parser('Scripts/Start/HappyToSeeMe.md')
+    parser = Parser('Scripts/Module/AssOrTitsMan_EDGING.txt')
     while parser.index <= len(parser.lines) - 2:
         parser.index += 1
         line = parser.parse(parser.lines[parser.index])

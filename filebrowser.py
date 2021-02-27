@@ -27,9 +27,10 @@ class FileBrowser():
         self.path = path
         self.treedata = sG.TreeData()
         self.layout = [
-            [sG.B('<<', k='BACK',
+            [sG.B('', image_filename='icons/browse_back.png', k='BACK',
                   disabled=(False, True)[self.history == '']),
-             sG.B('^', k='UP', disabled=(False, True)[self.path == '/']),
+             sG.B('', image_filename='icons/up.png', k='UP',
+                  disabled=(False, True)[self.path == '/']),
              sG.Input(path, size=(40, 1), text_color='#000000', k='PATH',
                       disabled=True)],
             [sG.Tree(data=self.treedata, headings=[], justification='left',
@@ -76,7 +77,9 @@ class FileBrowser():
         file_icon = 'file.png'
         for file in sorted(files, key=str.lower):
             fqp = os.path.join(path, file)
+            print('inserting a file')
             self.treedata.insert(parent, fqp, '  ' + file, [], icon=file_icon)
+        self.window['FILES'].update(values=self.treedata)
 
     def _change_path(self, path: str) -> None:
         """
@@ -152,5 +155,6 @@ class FileBrowser():
 
 
 if __name__ == "__main__":
-    win = FileBrowser(str(os.path.expanduser))
+    path = '/home/michael'
+    win = FileBrowser(path)
     win.show()

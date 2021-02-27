@@ -176,6 +176,12 @@ while True:
             opt_event, opt_vals = opts.read()
             if opt_event in ["Exit", sG.WIN_CLOSED]:
                 break
+            if opt_event.startswith('BROWSE_'):
+                prefix = opt_event.split('_')[1]
+                browser = FileBrowser(opts[prefix + '_FOLDER'].get())
+                folder = browser.show()
+                opts[prefix + '_FOLDER'].update(value=folder)
+                browser.window.close()
             if opt_event in OPTIONS.dict.keys():
                 OPTIONS[opt_event] = opt_vals[opt_event]
             if 'SRV' in opt_event:

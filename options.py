@@ -24,6 +24,8 @@ load_defaults = {
     'CHAT_NAME': None,
     'SERVER_PORT': 1337,
     'SERVER_ADDRESS': None,
+    'BOOBS_FOLDER': os.path.expanduser,
+    'BUTTS_FOLDER': os.path.expanduser
 }
 
 
@@ -139,6 +141,16 @@ def open_options(server: object) -> sG.Window:
                           k='HOTKEY_%s' % i, enable_events=True)]
         hotkey_options.append(key_list)
 
+    local_media_options = [
+        [sG.T('Local Media Options')],
+        [sG.T(' Boobs Directory:')],
+        [sG.B('', image_filename='icons/folder.png', k='BROWSE_BOOBS'),
+         sG.In(OPTIONS['BOOBS_FOLDER'], k='BOOBS_FOLDER', disabled=True)],
+        [sG.T(' Butts Directory:')],
+        [sG.B('', image_filename='icons/folder.png', k='BROWSE_BUTTS'),
+         sG.In(OPTIONS['BUTTS_FOLDER'], k='BUTTS_FOLDER', disabled=True)]
+    ]
+
     server_options = [
         [sG.T('Host Options')],
         [sG.T('Hostname/IP', size=(15, 1)),
@@ -168,6 +180,7 @@ def open_options(server: object) -> sG.Window:
 
     tab_group_layout = [[sG.Tab('General', general_options),
                          sG.Tab('Hotkeys', hotkey_options),
+                         sG.Tab('Local Media', local_media_options),
                          sG.Tab('Server', server_options)]]
 
     layout = [[sG.TabGroup(tab_group_layout)]]
