@@ -1,32 +1,23 @@
 hold edge verb
 show image verb
 show video verb
-random number verb
-change variable verb
 cum verb
 ruin verb
-show[type]image verb
 
-Questionable?:
-@LockImages
-@UnlockImages
-
-
-Need to be implemented - Names have been reserved by script conversion logic:
-
-showBoobsImage() - @ShowBoobsImage
-showButtImage() = @ShowButtImage
 
 functions:
 -DONE setFlag - create a flag for the client and set it to True
--DONE checkFlag - get value of a script-created boolean client flag, if True, execute a goto statement to the anchor provided as an argument
--DONE goto  - skip to the specified anchor - can only go forwards
--DONE chance - 2 params, 2 digit chance and command to execute on success
--NEEDS WORK ? - question function, looks for some input from the user and compares it to the list of options provided by the script
+-DONE checkFlag - if the client has the flag named by the argument provided to this call, executes a goto statement to the anchor of the same name.
+-DONE deleteFlag - delete a flag from the client if it exists.
+-DONE goto  - Move the execution pointer to the provided anchor.
+-DONE chance - Takes an integer between 0 and 100 as the first argument and command to execute with a chance equal to the perecentage represented by the first argument.
+-NEEDS WORK getAnswer - question function, looks for some input from the user and compares it to the list of options provided by the script
 -DONE loopAnswer - executes a goto, sending the script back to the top of the list of options for the current question and repeats the process of handling user input
- -DONE var - get the value of an option variable
+-DONE var - get the value of a variable in the userSettings dict.
 -DONE startStroking - tell sub to start stroking and set the flag that sub is stroking
 -DONE stopStroking - tell sub to stop stroking and set the flag that sub is not stroking
+-DONE showBoobsImage() - display a random image from the user's "boobs folder"
+-DONE showButtImage() - dispaly a random image from the user's "butts folder"
 -DOND randint - 2 params, generate a random integer between the two integer params and insert it in place of the call
 -DONE end - marks the end of a script
 
@@ -34,8 +25,8 @@ functions:
 
 @Info decorator must be the first line of the script
 anchor begins with # and must begin the line
-vocab surrounded with _vocab_  <- Markdown italic
-answers surrounded with [answers]
-verbs utilize function notation
-every token except vocab tokens and var() calls must be on a separate line
-Dialog lines must be encapsulated with ""
+vocab surrounded with underscores: _vocab_ 
+answers surrounded with square brackets: [answers]
+functions called by name with arguments in parentheses: function(argument, argument2)
+every token except vocab tokens and var(), randint() calls must be on a separate line
+Dialog lines must be encapsulated with double quotes: "Say something."

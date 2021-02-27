@@ -2,18 +2,18 @@
 """Classes related to the TeaseAI server"""
 import io
 import os
+import random
 import socket
 import sqlite3
-import random
+from script_parser import Parser
 from queue import SimpleQueue
 from threading import Lock, Thread
 from typing import Any
+
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from crypto import get_key_pair, load_pem, encrypt, decrypt, hash_password,\
-    encrypt_file, encrypt_message
-
-from parser import Parser
+from crypto import (decrypt, encrypt, encrypt_file, encrypt_message,
+                    get_key_pair, hash_password, load_pem)
 
 DB = 'teaseai.db'
 
@@ -41,6 +41,7 @@ class Person:
         self.client = client
         self.name = None
         self.key = key
+        self.ops = False
 
     def set_name(self, name: str) -> None:
         """
