@@ -13,8 +13,7 @@ class FileBrowser():
     """Class for custom file browser widget."""
 
     def __init__(self, path: str, history: str = '') -> None:
-        """
-        Initializes the file browser.
+        """Initializes the file browser.
 
         :param path: The path to start the file browser in.
         :type path: string
@@ -45,14 +44,13 @@ class FileBrowser():
         self.window['IMAGE'].expand(True, True)
         self.preview_frame = self.window['IMAGE'].get_size()
         self.window['PATH'].expand(expand_x=True, expand_y=True)
-        self.window['FILES'].bind('<Double-Button-1>', '_double_clicked')
         self._add_folder(self.path)
 
     def _add_folder(self, path: str) -> None:
-        """
-        Add a folder to the tree.
+        """Add a folder to the tree.
 
         :param path: The folder to be added to the tree.
+        :type path: stre folder to be added to the tree.
         :type path: str
         """
         parent = '' if path == self.path else path
@@ -69,12 +67,12 @@ class FileBrowser():
                     files.append(item)
         except PermissionError:
             pass
-        folder_icon = 'folder.png'
+        folder_icon = 'icons/folder.png'
         for folder in sorted(folders, key=str.lower):
             fqp = os.path.join(path, folder)
             self.treedata.insert(parent, fqp, '  ' + folder, [fqp],
                                  icon=folder_icon)
-        file_icon = 'file.png'
+        file_icon = 'icons/file.png'
         for file in sorted(files, key=str.lower):
             fqp = os.path.join(path, file)
             print('inserting a file')
@@ -94,14 +92,13 @@ class FileBrowser():
         self._add_folder(path)
         self.window['FILES'].update(values=self.treedata)
         self.window['PATH'].update(value=path)
-        self.window['UP'].update(disabled=(False, True)[self.path == '/'])
-        self.window['BACK'].update(disabled=(
             False, True)[self.history is None])
 
     def preview(self, image: str, size: tuple[int, int]) -> None:
-        """
-        Display an image in the preview pane.
+        """Display an image in the preview pane.
 
+        :param image: The path to the image file to preview.
+        :type image: string
         :param image: The path to the image file to preview.
         :type image: string
         :param size: The size to scale the image to. (width, height)
@@ -109,14 +106,13 @@ class FileBrowser():
         """
         img = Image.open(image)
         img = ImageOps.pad(img, size=size)
-        with BytesIO() as bio:
-            img.save(bio, format="PNG")
-            del img
             self.window['IMAGE'].update(data=bio.getvalue())
 
     def select_folder(self, values: dict) -> str:
-        """
-        Returns the selected folder.
+        """Returns the selected folder.
+
+        :param values: The dict of values from the browser window.
+        :type values: dicted folder.
 
         :param values: The dict of values from the browser window.
         :type values: dict
