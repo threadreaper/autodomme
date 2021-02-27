@@ -14,7 +14,8 @@ class ServerBrowser():
 
     def __init__(self, client: Client, path: str = '',
                  history: str = '') -> None:
-        """Initializes the server browser.
+        """
+        Initializes the server browser.
 
         :param client: An instance of the `Client` class.
         :type client: :class:`Client`
@@ -52,14 +53,15 @@ class ServerBrowser():
         self.preview_frame = self.window['IMAGE'].get_size()
         if self.client.window is not None:
             self.media_player = self.client.window['IMAGE'].get_size()
+        self.window['PATH'].expand(expand_x=True, expand_y=True)
         self.window['FILES'].bind('<Double-Button-1>', '_double_clicked')
 
     def _request_folder(self, path: str) -> tuple[list[str], list[str]]:
-        """Request a listing of folder contents from the server and return a\
-        list of folders and files at the given path.
+        """
+        Request a listing of folder contents from the server and return a\
+            list of folders and files at the given path.
 
         :param path: The path to request the contents of.
-        :type path: stre path to request the contents of.
         :type path: str
         :returns: A list of folders and a list of files at the given path.
         :rtype: tuple[list[str], list[str]]
@@ -71,13 +73,14 @@ class ServerBrowser():
             folders = self.client.session.browser_folders
             files = self.client.session.browser_files
         self.client.session.browser_folders = ['None']
+        self.client.session.browser_files = ['None']
+        return (folders, files)
 
     def _add_folder(self, path: str, folders: list[str],
                     files: list[str]) -> None:
-        """Add a folder to the tree.
+        """
+        Add a folder to the tree.
 
-        :param path: The path to populate on the tree.
-        :type path: string
         :param path: The path to populate on the tree.
         :type path: string
         :param folders: The list of folders to add.
@@ -85,7 +88,7 @@ class ServerBrowser():
         :param files: The list of files to add.
         :type files: list[str]
         """
-        folder_icon = 'icons/folder.png'
+        folder_icon = 'folder.png'
         parent = ''
         for folder in sorted(folders, key=str.lower):
             fqp = os.path.join(path, folder)
@@ -94,17 +97,18 @@ class ServerBrowser():
                                      icon=folder_icon)
             else:
                 self.treedata.insert(parent, None, '...', [], None)
-        file_icon = 'icons/file.png'
+        file_icon = 'file.png'
         for file in sorted(files):
             fqp = os.path.join(path, file)
             if file != 'NULL':
+                self.treedata.insert(parent, fqp, '  ' +
+                                     file, [fqp], icon=file_icon)
+            else:
                 self.treedata.insert(parent, None, '...', [], None)
 
     def _change_path(self, path: str) -> None:
-        """Changes the path of the server browser.
-
-        :param path: The path to change to.
-        :type path: stringf the server browser.
+        """
+        Changes the path of the server browser.
 
         :param path: The path to change to.
         :type path: string
@@ -114,25 +118,27 @@ class ServerBrowser():
         self.treedata = sG.TreeData()
         folders, files = self._request_folder(path)
         self._add_folder(path, folders, files)
+        self.window['FILES'].update(values=self.treedata)
+        self.window['PATH'].update(value=path)
+        self.window['UP'].update(disabled=(False, True)[self.path == '/'])
+        self.window['BACK'].update(disabled=(
             False, True)[self.history is None])
 
     def preview(self, img: str) -> None:
-        """Display an image in the preview pane.
-
-        :param img: Path to the image file to be displayed.
-        :type img: string
+        """
         Display an image in the preview pane.
 
         :param img: Path to the image file to be displayed.
         :type img: string
         """
+        self.client.recv_lock.acquire()
+        image = self.client._request_file(img, self.preview_frame)
+        self.client.recv_lock.release()
+        with BytesIO() as bio:
+            image.save(bio, format="PNG")
             self.window['IMAGE'].update(data=bio.getvalue())
 
     def select_folder(self, values: dict) -> str:
-        """Returns the selected folder.
-
-        :param values: The dict of values from the browser window.
-        :type values: dict, values: dict) -> str:
         """
         Returns the selected folder.
 
