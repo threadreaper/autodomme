@@ -170,7 +170,7 @@ class ServerBrowser():
                 return self.select_folder(values)
             elif event == 'FILES_double_clicked':
                 node = self.treedata.tree_dict[values['FILES'][0]]
-                if str(node.icon).startswith('folder'):
+                if str(node.icon).startswith('icons/folder'):
                     self._change_path(node.key)
                 else:
                     self.client.recv_lock.acquire()
@@ -182,7 +182,7 @@ class ServerBrowser():
                         self.client.window['IMAGE'].update(data=bio.getvalue())
             elif len(values['FILES']) > 0:
                 node = self.treedata.tree_dict[values['FILES'][0]]
-                if str(node.icon).startswith('file'):
+                if str(node.icon).startswith('icons/file'):
                     self.preview(node.values[0])
         self.window.close()
 

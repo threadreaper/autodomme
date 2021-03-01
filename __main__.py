@@ -136,9 +136,14 @@ while True:
             srv_folder = client.session.srv_folder
         window['SRV_FOLDER'].update(value=srv_folder)
     elif event == 'SRV_PLAY':
-        server.slideshow = SlideShow(window['SRV_FOLDER'].get(), server)
-        slideshow = server.slideshow
-        slideshow.start()
+        for person in server.clients:
+            if person.name.lstrip('@') == OPTIONS['CHAT_NAME'] and person.ops:
+                server.slideshow = SlideShow(window['SRV_FOLDER'].get(),
+                                             server)
+                slideshow = server.slideshow
+                slideshow.start()
+            else:
+                sG.cprint('Error: Must have server ops for this operation.')
     elif event == 'SRV_PAUSE':
         slideshow.stop()
     elif event == 'SRV_BACK':

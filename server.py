@@ -80,7 +80,7 @@ class Server(object):
         self.address = (self.host, self.port)
         self.path = self.opt_get('folder')
         self.started = False
-        self.clients = []
+        self.clients: list[Person] = []
         self.socket = None
         self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
@@ -203,22 +203,28 @@ class Server(object):
         :returns: True on success, False otherwise
         :rtype: bool
         """
-        if self._authenticate(person):
-            msg = encrypt(person.key, 'True')
-            person.client.send(msg)
-            name = person.client.recv(BUFFER)
-            name = decrypt(self.private_key, name)
-            person.set_name(name)
-            message = (f"{name} has joined the chat!")
-            self.client_lock.acquire()
-            self.clients.append(person)
-            self.client_lock.release()
-            self.broadcast(message, "")
-            for person in self.clients:
-                self._send_session_vars(person)
-            return True
-        else:
+        if not self._authenticate(person):
             return False
+        msg = encrypt(person.key, 'True')
+        person.client.send(msg)
+        name = person.client.recv(BUFFER)
+        name = decrypt(self.private_key, name)
+        if len(self.clients) == 0:
+            person.set_name('@%s' % name)
+            person.ops = True
+        else:
+            person.set_name(name)
+        message = (f"{person.name} has joined the chat!")
+        self.client_lock.acquire()
+        self.clients.append(person)
+        self.client_lock.release()
+        self.broadcast(message, "")
+        if person.ops:
+            msg = ('Server sets mode +o %s' % name)
+            self.broadcast(msg, "")
+        for person in self.clients:
+            self._send_session_vars(person)
+        return True
 
     def _send_session_vars(self, person: Person) -> None:
         """
@@ -368,7 +374,7 @@ class Server(object):
                 person.client.send(chunk)
                 chunk = file.read(BUFFER)
 
-    def broadcast_image(self, image: str) -> None:
+    def _broadcast_image(self, image: str) -> None:
         """
         Encrypts and broadcasts an image to all connected clients.
 
@@ -462,11 +468,16 @@ class SlideShow(object):
         :param folder: The folder to add images from.
         :type folder: string
         """
-        images = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
-                  if os.path.isfile(os.path.join(folder, f)) and
-                  f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
-        folders = [os.path.join(folder, f) for f in sorted(os.listdir(folder))
-                   if os.path.isdir(os.path.join(folder, f))]
+        images = []
+        folders = []
+        try:
+            images = [os.path.join(folder, f) for f in sorted(os.listdir(
+                folder)) if os.path.isfile(os.path.join(folder, f)) and
+                f.lower().endswith(('png', 'jpg', 'jpeg', 'tiff', 'bmp'))]
+            folders = [os.path.join(folder, f) for f in sorted(os.listdir(
+                folder)) if os.path.isdir(os.path.join(folder, f))]
+        except PermissionError:
+            ...
         self.images += images
         if self.server.opt_get('subfolders') == '1':
             for folder in folders:
@@ -485,7 +496,7 @@ class SlideShow(object):
     def _show(self) -> None:
         """Display the current slideshow image."""
         image = self.images[self.index]
-        self.server.broadcast_image(image)
+        self.server._broadcast_image(image)
 
     def next(self) -> None:
         """Advance the slideshow to the next slide."""
