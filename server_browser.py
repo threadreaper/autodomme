@@ -20,10 +20,10 @@ class ServerBrowser():
         :param client: An instance of the `Client` class.
         :type client: :class:`Client`
         :param path: The path to open the server browser in.
-        :type path: string
+        :type path: :type:`str`
         :param history: The previous path of the server browser to\
             accomodate the functionality of the back button.
-        :type history: string
+        :type history::type:`str`
         """
         self.theme = OPTIONS['THEME'].split()[1]
         sG.theme(self.theme)

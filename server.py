@@ -161,10 +161,9 @@ class Server(object):
         :type name: str
         """
         for person in self.clients:
-            client = person.client
-            txt = encrypt(person.key, '%s %s' % (name, msg))
+            txt = '%s %s' % (name, msg)
             try:
-                client.send(txt)
+                self.send_message(person, txt)
             except socket.error as error:
                 self.queue.put("Failed to BroadCast message - %s" % error)
 
@@ -186,8 +185,7 @@ class Server(object):
         try:
             username, password = decrypt(self.private_key, auth_packet).split()
         except ValueError:
-            msg = encrypt(person.key, 'User/Pass must not be empty.')
-            person.client.send(msg)
+            self.send_message(person, 'User/Pass must not be empty.')
             auth_packet = person.client.recv(BUFFER)
             username, password = self._validate_auth_packet(auth_packet,
                                                             person)
@@ -205,8 +203,7 @@ class Server(object):
         """
         if not self._authenticate(person):
             return False
-        msg = encrypt(person.key, 'True')
-        person.client.send(msg)
+        self.send_message(person, 'True')
         name = person.client.recv(BUFFER)
         name = decrypt(self.private_key, name)
         if len(self.clients) == 0:
@@ -238,8 +235,20 @@ class Server(object):
         for client in self.clients:
             msg += '%s:' % client.name
         msg += 'END'
-        msg = encrypt(person.key, msg)
-        person.client.send(msg)
+        self.send_message(person, msg)
+
+    def send_message(self, person: Person, message: str) -> None:
+        """
+        Encrypts and sends a message to a connected client.
+
+        :param person: The `Person` object for the client to send the message\
+            to.
+        :type person: :class:`Person`
+        :param message: The message to send.
+        :type message: string.
+        """
+        enc_msg = encrypt(person.key, message)
+        person.client.send(enc_msg)
 
     def _authenticate(self, person):
         """
@@ -259,8 +268,7 @@ class Server(object):
                                    (username,)):
                 salt = row[0]
             if salt == '':
-                msg = encrypt(person.key, 'Invalid User')
-                person.client.send(msg)
+                self.send_message(person, 'Invalid user.')
                 auth_packet = person.client.recv(BUFFER)
                 username, password = self._validate_auth_packet(auth_packet,
                                                                 person)
@@ -272,8 +280,7 @@ class Server(object):
                     password = ?", (username, key)):
                 user = row[0]
             if not user:
-                msg = encrypt(person.key, 'Invalid Password')
-                person.client.send(msg)
+                self.send_message(person, 'Invalid password.')
                 auth_packet = person.client.recv(BUFFER)
                 username, password = self._validate_auth_packet(auth_packet,
                                                                 person)
@@ -307,8 +314,7 @@ class Server(object):
                 else:
                     self.broadcast(msg, person.name + ": ")
         else:
-            msg = encrypt(person.key, 'Something went wrong')
-            client.send(msg)
+            self.send_message(person, 'Something went wrong.')
 
     def _start_server(self) -> None:
         """Starts the server and handles incoming client connections."""
@@ -362,11 +368,7 @@ class Server(object):
         :param key: The Fernet key used to encrypt the file.
         :type key: str
         """
-        msg = encrypt(person.key, 'IMG:%s:%s' % (length, key))
-        try:
-            person.client.send(msg)
-        except socket.error as error:
-            self.queue.put("Failed to BroadCast message %s" % error)
+        self.send_message(person, 'IMG:%s:%s' % (length, key))
 
         with io.BytesIO(enc_file) as file:
             chunk = file.read(BUFFER)
@@ -421,16 +423,14 @@ class Server(object):
         files = 'FILES:' + ((',').join(files) if files else 'NULL')
         if len(folders + files) > 446:
             enc_msg, length, key = encrypt_message(folders + files)
-            msg = encrypt(person.key, 'MSG:%s:%s' % (length, key))
-            person.client.send(msg)
+            self.send_message(person, 'MSG:%s:%s' % (length, key))
             with io.BytesIO(enc_msg) as file:
                 chunk = file.read(BUFFER)
                 while chunk:
                     person.client.send(chunk)
                     chunk = file.read(BUFFER)
         else:
-            msg = encrypt(person.key, folders + files)
-            person.client.send(msg)
+            self.send_message(person, folders + files)
 
 
 class SlideShow(object):

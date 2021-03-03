@@ -6,7 +6,13 @@ import hashlib
 
 
 def get_key_pair() -> tuple[rsa.RSAPrivateKeyWithSerialization, bytes]:
-    """Creates and returns an RSA key pair."""
+    """
+    Creates and returns an RSA key pair.
+
+    :returns: A private key and a public key.
+    :rtype: :type:`tuple`[:class:`rsa.RSAPrivateKeyWithSerialization`,\
+        :type:`bytes`]
+    """
     private_key = rsa.generate_private_key(public_exponent=65537,
                                            key_size=4096)
     pub = private_key.public_key()
@@ -23,7 +29,7 @@ def encrypt(pub_key: rsa.RSAPublicKey, msg: str) -> bytes:
     :param pub_key: RSA public key to encrypt the message with.
     :type pub_key: :class:`rsa.RSAPublicKey`
     :param msg: Message to encrypt.
-    :type msg: string
+    :type msg: :type:`str`
     :return: Encrypted message.
     :rtype: bytes
     """
@@ -42,7 +48,7 @@ def decrypt(priv_key: rsa.RSAPrivateKeyWithSerialization, msg: bytes) -> str:
     :param msg: Message to decrypt
     :type msg: bytes
     :return: The decrypted message
-    :rtype: str
+    :rtype: :type:`str`
     """
     text = priv_key.decrypt(msg, padding.OAEP(
             mgf=padding.MGF1(algorithm=hashes.SHA256()),
@@ -56,7 +62,7 @@ def hash_password(password: str, salt: bytes) -> str:
     returns the hash.
 
     :param password: The submitted password to check.
-    :type password: str
+    :type password: :type:`str`
     :param salt: The original salt used to hash the user's password.
     :type salt: bytes
     """
@@ -72,7 +78,7 @@ def encrypt_file(filename: str) -> tuple[bytes, str, str]:
     :param filename: /path/to/file
     :type filename: path or filename
     :returns: Encrypted file, size in bytes, symmetric key
-    :rtype: tuple[bytes, str, str]
+    :rtype: tuple[bytes, :type:`str`, :type:`str`]
     """
     with open(filename, 'rb') as file:
         file_data = file.read()
@@ -88,9 +94,9 @@ def encrypt_message(msg: str) -> tuple[bytes, str, str]:
     in bytes and the symmetric key used to encrypt it.
 
     :param msg: The plaintext message to encrypt.
-    :type msg: str
+    :type msg: :type:`str`
     :returns: Encrypted message, size in bytes and symmetric key
-    :rtype: tuple[bytes, str, str]
+    :rtype: tuple[bytes, :type:`str`, :type:`str`]
     """
     f_key = Fernet.generate_key()
     fern = Fernet(f_key)
