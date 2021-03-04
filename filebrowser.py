@@ -3,10 +3,8 @@
 import os
 from io import BytesIO
 
-import PySimpleGUI as sG
 from PIL import Image, ImageOps
-
-from options import OPTIONS
+import PySimpleGUI as sG
 
 
 class FileBrowser():
@@ -22,7 +20,6 @@ class FileBrowser():
             the functionality of the back button.
         :type history: string
         """
-        sG.theme(OPTIONS['THEME'].split()[1])
         self.history = history
         self.path = path
         self.treedata = sG.TreeData()

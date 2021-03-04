@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
 """Classes related to the TeaseAI server"""
-import io
+from __future__ import annotations
+
 import os
+import pickle
 import random
 import socket
 import sqlite3
-from script_parser import Parser
 from queue import SimpleQueue
 from threading import Lock, Thread
 from typing import Any
 
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import Encoding,\
+    PublicFormat, load_pem_public_key
 
-from crypto import (decrypt, encrypt, encrypt_file, encrypt_message,
-                    get_key_pair, hash_password, load_pem)
+from crypto_functions import get_key_pair, hash_password, \
+    send_package, open_package
+from script_parser import Parser
 
 DB = 'teaseai.db'
 
@@ -38,20 +42,11 @@ class Person:
         :type key: rsa.RSAPublicKey
         """
         self.addr = addr
-        self.client = client
-        self.name = None
+        self.socket = client
+        self.name: str = ''
         self.key = key
         self.ops = False
-
-    def set_name(self, name: str) -> None:
-        """
-        Sets the chat name for a connected client.
-
-        :param name: Client's chat name.
-        :type name: str
-        """
-
-        self.name = name
+        self.options = {}
 
 
 class Server(object):
@@ -109,8 +104,6 @@ class Server(object):
         except socket.error as error:
             self.queue.put("Error....Unable to Set Up Sockets with"
                            "{0}".format(error.strerror))
-            print("Error....Unable to Set Up Sockets with\
-                {0}".format(error.strerror))
             self.socket.close()
 
     def kill(self) -> None:
@@ -122,6 +115,14 @@ class Server(object):
             self.socket.close()
         else:
             self.queue.put("Error: No Server is running.")
+
+    def update(self):
+        for person in self.clients:
+            if person.ops and not str(person.name).startswith('@'):
+                person.name = '@%s' % person.name
+
+    def recv(self, person: Person) -> tuple[str, bytes]:
+        return open_package(person.key, self.private_key, person.socket)
 
     def opt_get(self, opt: str) -> Any:
         """
@@ -163,11 +164,11 @@ class Server(object):
         for person in self.clients:
             txt = '%s %s' % (name, msg)
             try:
-                self.send_message(person, txt)
+                self.send_message(person, txt, 'MSG')
             except socket.error as error:
                 self.queue.put("Failed to BroadCast message - %s" % error)
 
-    def _validate_auth_packet(self, auth_packet: bytes,
+    def _validate_auth_packet(self, auth_packet: tuple[str, bytes],
                               person: Person) -> tuple[str, str]:
         """
         Verifies that username and password are both populated and if not,
@@ -182,14 +183,49 @@ class Server(object):
         :returns: Username and password
         :rtype: tuple
         """
-        try:
-            username, password = decrypt(self.private_key, auth_packet).split()
-        except ValueError:
-            self.send_message(person, 'User/Pass must not be empty.')
-            auth_packet = person.client.recv(BUFFER)
-            username, password = self._validate_auth_packet(auth_packet,
-                                                            person)
+        username, password = auth_packet[1].decode().split()
+        if username == '' or password == '':
+            self.send_message(person, 'User/Pass must not be empty.', 'LOG')
+            auth_packet = self.recv(person)
+            return self._validate_auth_packet(auth_packet, person)
         return username, password
+
+    def _authenticate(self, person: Person) -> bool:
+        """
+        Authenticates a user. Returns True on success
+
+        :param person: The client's `Person` object.
+        :type person: :class:`Person`
+        :return: True on success
+        :rtype: bool
+        """
+        con = sqlite3.connect(DB)
+        auth_packet = self.recv(person)
+        username, password = self._validate_auth_packet(auth_packet, person)
+        salt = False
+        while not salt:
+            for row in con.execute("SELECT salt FROM users WHERE username = ?",
+                                   (username,)):
+                salt = row[0]
+            if salt == '':
+                self.send_message(person, 'Invalid user.', 'LOG')
+                auth_packet = self.recv(person)
+                username, password = self._validate_auth_packet(auth_packet,
+                                                                person)
+        user = False
+        while not user:
+            key = hash_password(password, salt)
+            for row in con.execute(
+                "SELECT username FROM users WHERE username = ? AND \
+                    password = ?", (username, key)):
+                user = row[0]
+            if not user:
+                self.send_message(person, 'Invalid password.', 'LOG')
+                auth_packet = self.recv(person)
+                username, password = self._validate_auth_packet(auth_packet,
+                                                                person)
+        con.close()
+        return True
 
     def _login(self, person: Person) -> bool:
         """
@@ -203,127 +239,93 @@ class Server(object):
         """
         if not self._authenticate(person):
             return False
-        self.send_message(person, 'True')
-        name = person.client.recv(BUFFER)
-        name = decrypt(self.private_key, name)
+        self.send_message(person, 'True', 'LOG')
+        msg_type, options = self.recv(person)
+        if msg_type == 'SES':
+            person.options = pickle.loads(options)
         if len(self.clients) == 0:
-            person.set_name('@%s' % name)
             person.ops = True
+            person.name = '@%s' % person.options['CHAT_NAME']
         else:
-            person.set_name(name)
-        message = (f"{person.name} has joined the chat!")
+            person.name = person.options['CHAT_NAME']
+        msg = ('%s has joined the chat!' % person.name.lstrip('@'))
         self.client_lock.acquire()
         self.clients.append(person)
-        self.client_lock.release()
-        self.broadcast(message, "")
+        self.broadcast(msg, "")
         if person.ops:
-            msg = ('Server sets mode +o %s' % name)
+            msg = ('Server sets mode +o %s' % person.name.lstrip('@'))
             self.broadcast(msg, "")
-        for person in self.clients:
-            self._send_session_vars(person)
+            self._send_session_vars()
+        self.client_lock.release()
         return True
 
-    def _send_session_vars(self, person: Person) -> None:
+    def _send_session_vars(self) -> None:
         """
         Sends a message containing necessary session information for an
         authenticated user.
-
-        :param person: The authenticated user's `Person` object.
-        :type person: :class:`Person`
         """
         msg = 'PATH:%s:ONLINE:' % self.path
-        for client in self.clients:
-            msg += '%s:' % client.name
+        for person in self.clients:
+            msg += '%s:' % person.name
         msg += 'END'
-        self.send_message(person, msg)
+        for person in self.clients:
+            self.send_message(person, msg, 'SES')
 
-    def send_message(self, person: Person, message: str) -> None:
+    def send_message(self, person: Person, msg: str | bytes,
+                     msg_type: str) -> None:
         """
-        Encrypts and sends a message to a connected client.
+        Send a message to a connected client.
 
         :param person: The `Person` object for the client to send the message\
             to.
         :type person: :class:`Person`
-        :param message: The message to send.
-        :type message: string.
+        :param msg: Message to send.
+        :type msg: `str`
+        :param msg_type: The type of transmission, one of MSG, IMG, SES, FOL\
+            or LOG
+        :type msg_type: `str`
         """
-        enc_msg = encrypt(person.key, message)
-        person.client.send(enc_msg)
-
-    def _authenticate(self, person):
-        """
-        Authenticates a user. Returns True on success
-
-        :param person: The client's `Person` object.
-        :type person: :class:`Person`
-        :return: True on success
-        :rtype: bool
-        """
-        con = sqlite3.connect(DB)
-        auth_packet = person.client.recv(BUFFER)
-        username, password = self._validate_auth_packet(auth_packet, person)
-        salt = False
-        while not salt:
-            for row in con.execute("SELECT salt FROM users WHERE username = ?",
-                                   (username,)):
-                salt = row[0]
-            if salt == '':
-                self.send_message(person, 'Invalid user.')
-                auth_packet = person.client.recv(BUFFER)
-                username, password = self._validate_auth_packet(auth_packet,
-                                                                person)
-        user = False
-        while not user:
-            key = hash_password(password, salt)
-            for row in con.execute(
-                    "SELECT username FROM users WHERE username = ? AND \
-                    password = ?", (username, key)):
-                user = row[0]
-            if not user:
-                self.send_message(person, 'Invalid password.')
-                auth_packet = person.client.recv(BUFFER)
-                username, password = self._validate_auth_packet(auth_packet,
-                                                                person)
-        con.close()
-        return True
+        send_package(person.key, self.private_key, msg, msg_type,
+                     person.socket)
 
     def _client_handler(self, person: Person) -> None:
         """
-        Handles communication with the client
+        Thread for handling communication with a client.
 
         :param person: The person object for the client
         :type person: :class:`Person`
         """
-        client = person.client
         if self._login(person):
             while True:
-                msg = decrypt(self.private_key, client.recv(BUFFER))
-                if msg.startswith('FILE:'):
-                    path = msg.split(':')
-                    self._serve_file(person, path[1])
-                elif msg.startswith('PATH:'):
-                    path = msg.split(':')[1]
+                msg_type, msg = self.recv(person)
+                if msg_type == 'IMG':
+                    path = msg.decode.split(':')[1]
+                    self._serve_file(person, path)
+                elif msg_type == 'FOL':
+                    path = msg.decode().split(':')[1]
                     self._add_folder(path, person)
-                elif msg == "/quit":
-                    message = ('%s has left the chat.' % person.name)
+                elif msg == "/quit" or len(msg) == 0:
+                    message = ('%s has left the chat.' %
+                               person.options['CHAT_NAME'])
                     self.broadcast(message, "")
-                    client.close()
+                    person.socket.close()
+                    self.client_lock.acquire()
                     self.clients.remove(person)
-                    self.queue.put("Disconnected %s from server" % person.name)
+                    self.client_lock.release()
                     break
                 else:
-                    self.broadcast(msg, person.name + ": ")
+                    self.broadcast(msg.decode(),
+                                   person.options['CHAT_NAME'] + ": ")
         else:
-            self.send_message(person, 'Something went wrong.')
+            self.send_message(person, 'Something went wrong.', 'LOG')
 
     def _start_server(self) -> None:
         """Starts the server and handles incoming client connections."""
         while True:
             try:
                 self.queue.put("Server running...")
-                (request_socket, client_addr) = self.socket.accept()
-                client_key = request_socket.recv(833)
-                client_key = load_pem(client_key)
+                request_socket, client_addr = self.socket.accept()
+                client_key = load_pem_public_key(request_socket.recv(833))
                 if isinstance(client_key, rsa.RSAPublicKey):
                     person = Person(client_addr, request_socket, client_key)
                     self.queue.put(
@@ -332,7 +334,8 @@ class Server(object):
                     handler = Thread(target=self._client_handler,
                                      args=(person,), daemon=True)
                     handler.start()
-                    request_socket.send(self.public_key)
+                    person.socket.send(self.public_key.public_bytes(
+                        Encoding.PEM, PublicFormat.SubjectPublicKeyInfo))
                 else:
                     request_socket.close()
                     self.queue.put("Connection rejected - bad key")
@@ -355,27 +358,6 @@ class Server(object):
         key = hash_password(password, salt)
         conn.execute("INSERT INTO users VALUES (?, ?, ?)", (user, key, salt))
 
-    def _send_file(self, person, enc_file, length, key):
-        """
-        Sends a file to a connected client.
-
-        :param person: The client's `Person` object.
-        :type person: :class:`Person`
-        :param enc_file: The encrypted file to send.
-        :type file: bytes
-        :param length: The length of the file to send.
-        :type length: str
-        :param key: The Fernet key used to encrypt the file.
-        :type key: str
-        """
-        self.send_message(person, 'IMG:%s:%s' % (length, key))
-
-        with io.BytesIO(enc_file) as file:
-            chunk = file.read(BUFFER)
-            while chunk:
-                person.client.send(chunk)
-                chunk = file.read(BUFFER)
-
     def _broadcast_image(self, image: str) -> None:
         """
         Encrypts and broadcasts an image to all connected clients.
@@ -383,11 +365,9 @@ class Server(object):
         :param image: /path/to/image
         :type image: str
         """
-        enc_file, length, key = encrypt_file(image)
-
         self.client_lock.acquire()
         for person in self.clients:
-            self._send_file(person, enc_file, length, key)
+            self.send_message(person, image, 'IMG')
         self.client_lock.release()
 
     def _serve_file(self, person: Person, file: str) -> None:
@@ -399,8 +379,7 @@ class Server(object):
         :param file: /path/to/file
         :type file: str
         """
-        enc_file, length, key = encrypt_file(file)
-        self._send_file(person, enc_file, length, key)
+        self.send_message(person, file, 'IMG')
 
     def _add_folder(self, path, person: Person):
         """
@@ -421,16 +400,7 @@ class Server(object):
         folders = 'FOLDERS:' + ((',').join(folders)
                                 if folders else 'NULL') + ':'
         files = 'FILES:' + ((',').join(files) if files else 'NULL')
-        if len(folders + files) > 446:
-            enc_msg, length, key = encrypt_message(folders + files)
-            self.send_message(person, 'MSG:%s:%s' % (length, key))
-            with io.BytesIO(enc_msg) as file:
-                chunk = file.read(BUFFER)
-                while chunk:
-                    person.client.send(chunk)
-                    chunk = file.read(BUFFER)
-        else:
-            self.send_message(person, folders + files)
+        self.send_message(person, folders + files, 'FOL')
 
 
 class SlideShow(object):
@@ -545,27 +515,14 @@ class AI(object):
         self.delta = 0
         self.lines = []
         self.index = 0
-        self.send('%s has joined the chat!' % self.name, '')
         self.parser = Parser('./Scripts/Start/HappyToSeeMe.md', self.server)
         self.flags = {}
-
-    def send(self, msg, name):
-        self.server.broadcast(msg, name)
 
     def update(self, delta):
         """
         Runs the next line of a script.
         """
-        self.delta += delta
-        if self.parser.index >= len(self.parser.lines):
-            return None
-        if self.delta >= self.time:
-            self.delta = 0
-            self.time = random.uniform(0.0, 3.0)
-            line = self.parser.parse(self.parser.lines[self.parser.index])
-            if line and line.startswith('"'):
-                self.send(line.strip(), self.name)
-            self.parser.index += 1
+        ...
 
 
 if __name__ == '__main__':
