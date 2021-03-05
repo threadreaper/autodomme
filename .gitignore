@@ -23,8 +23,8 @@ __pycache__/options.cpython-39.pyc
 __pycache__/parser.cpython-39.pyc
 __pycache__/remote.cpython-39.pyc
 __pycache__/session.cpython-39.pyc
-.gitignore
-.gitignore
-.gitignore
 .vscode/launch.json
 .gitignore
+.pytest_cache/
+.vscode/
+__pycache__/
