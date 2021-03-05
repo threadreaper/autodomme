@@ -23,6 +23,7 @@ from filebrowser import FileBrowser
 from server import Server, SlideShow
 from server_browser import ServerBrowser
 from solitaire import MyGame, arcade
+from git_functions import auto_update
 
 
 def load_options() -> sG.UserSettings:
@@ -44,13 +45,15 @@ def load_options() -> sG.UserSettings:
         'DOMME_NAME': 'Domme',
         'HOST_FOLDER': os.path.expanduser('~'),
         'BOOBS_FOLDER': os.path.expanduser('~'),
-        'BUTTS_FOLDER': os.path.expanduser('~')
+        'BUTTS_FOLDER': os.path.expanduser('~'),
+        'UPDATES': False
     }
     settings = os.getcwd() + '/config.json'
     sG.user_settings_filename(settings)
     if sG.user_settings_file_exists(settings):
         for k, v in defaults.items():
-            sG.user_settings_get_entry(k, v)
+            if k not in sG.user_settings().keys():
+                sG.user_settings_set_entry(k, v)
     else:
         for k, v in defaults.items():
             sG.user_settings_set_entry(k, v)
@@ -281,6 +284,9 @@ if __name__ == '__main__':
     server = Server()
     slideshow = server.slideshow
     time = t.time()
+
+    if client.options['UPDATES']:
+        auto_update()
 
     while True:
         client.update()

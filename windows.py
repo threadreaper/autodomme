@@ -106,6 +106,8 @@ def options_window(client) -> sG.Window:
 
     gen_col_one = [
         [sG.T('General Options')],
+        [sG.CB('Automatic Updates', enable_events=True, k='UPDATES',
+               default=client.options['UPDATES'])],
         [sG.T('Username for Chat:')],
         [sG.In(client.options['CHAT_NAME'], enable_events=True, size=(20, 1),
                k='CHAT_NAME')],
