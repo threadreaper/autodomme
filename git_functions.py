@@ -9,5 +9,8 @@ if '.git' not in os.listdir(os.getcwd()):
 else:
     repo = Repo.init(os.getcwd())
 
-if repo.remotes[0].exists():
-    repo.remotes[0].fetch()
+origin = repo.remote('origin')
+if origin.exists():
+    repo.git.checkout('new_client')
+    if repo.is_dirty():
+        repo.remote('origin').push()
