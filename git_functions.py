@@ -1,20 +1,12 @@
-from git import Repo
 import os
+import sh
 
 
 if '.git' not in os.listdir(os.getcwd()):
-    repo = Repo.init(os.getcwd())
-    repo.create_remote('origin', 'https://github.com/threadreaper/autodomme')
-    repo.git.checkout('new_client')
+    sh.git('init')
+    sh.git('remote', 'add', 'origin', 'https://github.com/threadreaper/autod,omme.git')
+    sh.git.checkout('new_client')
 else:
-    repo = Repo.init(os.getcwd())
-
-origin = repo.remote('origin')
-if origin.exists():
-    repo.git.checkout('new_client')
-    if repo.is_dirty():
-        repo.git.add('--all')
-        repo.git.commit('-m', 'commit from python')
-        origin.push()
-    else:
-        origin.pull()
+    remote = sh.git('remote')
+    if remote.exit_code != 0:
+        sh.git('remote', 'add', 'origin', 'https://github.com/threadreaper/autodomme.git')
