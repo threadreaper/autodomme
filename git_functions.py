@@ -16,3 +16,5 @@ if origin.exists():
         repo.git.add('--all')
         repo.git.commit('-m', 'commit from python')
         origin.push()
+    else:
+        origin.pull()
