@@ -1,3 +1,5 @@
+This is a test for python's git pull
+
 # TeaseAI Scripting Documentation
 
 One of my goals for this project was to simplify the scripting language of the original TeaseAI and make it more accessible for non-programmer types.  However, the richness of functionality that makes TeaseAI really interesting necessitates a certain level of complexity.  As I have been unable to do much to reduce this complexity within the syntax of the scripting language itself, it is my hope that producing exhuastive and comprehensive documentation will be enough to diminish the barrier of entry into TeaseAI scripting.
