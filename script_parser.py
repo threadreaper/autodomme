@@ -4,8 +4,8 @@ import re
 import os
 import sqlite3
 import random
+import pickle
 from typing import Any
-from options import OPTIONS
 
 DB = 'teaseai.db'
 
@@ -13,7 +13,7 @@ DB = 'teaseai.db'
 class Parser():
     """Script parser object"""
 
-    def __init__(self, script: str, server: object = None) -> None:
+    def __init__(self, script: str, server=None) -> None:
         """
         Initializes the parser.
 
@@ -41,7 +41,7 @@ class Parser():
         database and returns a randomly selected synonym.
 
         :param vocab: The vocab string from the parser.
-        :type vocab: string
+        :type vocab: :type:`str`
         :return: A randomly selected synonym.
         :rtype: string
         """
@@ -77,7 +77,8 @@ class Parser():
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
                     args = self._parse_function(hit)[1]
-                    lines[i] = lines[i].replace(hit, OPTIONS[args[0].upper()])
+                    # TODO: resolve this to a specific user
+                    lines[i] = lines[i].replace(hit, args[0])
             regex = re.compile(r'randint\(\d+, \d+\)')
             for i, line in enumerate(lines):
                 for hit in regex.findall(line):
@@ -132,6 +133,37 @@ class Parser():
                 self.index += options[i+2]
                 return options[i+1]
         self.index -= 2
+        return '"Your response to my question seems meaningless."'
+
+    def get_response(self, args: list[str]) -> str:
+        """
+        Gets an answer to a question from the client and returns\
+            the AI's response
+
+        :param args: A list of arguments to be passed to the function.
+        :type args: list[str]
+        """
+        options = []
+        # TODO: prompt user after timeout
+        # TODO: get input from the chat
+        # TODO: resolve options to vocab words
+        lines = self.lines[self.index:]
+        for i, line in enumerate(lines):
+            match = re.match(self.rx_dict['option'], line)
+            if match:
+                options.append((i, line.lstrip('[').rstrip(']  \n')))
+            match = re.match(self.rx_dict['anchor'], line)
+            if match:
+                break
+        # - Update the clients with the list of possible responses so they can
+        #   update the GUI, and enter a while loop until some variable gets
+        #   populated.
+        options = pickle.dumps(options).decode()
+        self.server.broadcast(options)
+        # - User clicks a response button, client receives response data
+        #   and sends it to the server.
+        # - The server populates the variable we are polling.
+        # - Our while loop breaks and we handle the user's response data.
         return '"Your response to my question seems meaningless."'
 
     def goto(self, args: list[str]) -> None:

@@ -3,16 +3,15 @@
 import os
 from io import BytesIO
 
-import PySimpleGUI as sG
 
-from client import Client, OPTIONS
 from server import Server
+import PySimpleGUI as sG
 
 
 class ServerBrowser():
     """Class for custom server browser widget."""
 
-    def __init__(self, client: Client, path: str = '',
+    def __init__(self, client, path: str = '',
                  history: str = '') -> None:
         """
         Initializes the server browser.
@@ -25,11 +24,9 @@ class ServerBrowser():
             accomodate the functionality of the back button.
         :type history::type:`str`
         """
-        self.theme = OPTIONS['THEME'].split()[1]
-        sG.theme(self.theme)
         self.history = history
         self.client = client
-        self.path = self.client.session.srv_folder if path == '' else path
+        self.path = str(self.client.session.srv_folder) if path == '' else path
         self.treedata = sG.TreeData()
         folders, files = self._request_folder(self.path)
         self._add_folder(self.path, folders, files)
@@ -156,12 +153,12 @@ class ServerBrowser():
         else:
             return values['PATH']
 
-    def show(self):
+    def show(self) -> str:
         """Show the file browser window."""
         while True:
             event, values = self.window.read()
             if event in ['Cancel', None]:
-                break
+                return self.path
             elif event == 'UP':
                 self._change_path(os.path.dirname(self.path))
             elif event == 'BACK':
@@ -184,10 +181,10 @@ class ServerBrowser():
                 node = self.treedata.tree_dict[values['FILES'][0]]
                 if str(node.icon).startswith('icons/file'):
                     self.preview(node.values[0])
-        self.window.close()
 
 
 if __name__ == "__main__":
+    from main import Client
     server = Server()
     server.set_up_server()
     client = Client()
