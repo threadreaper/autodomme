@@ -5,7 +5,7 @@ import os
 if '.git' not in os.listdir(os.getcwd()):
     repo = Repo.init(os.getcwd())
     repo.create_remote('origin', 'https://github.com/threadreaper/autodomme')
-    repo.git.checkout('v0.0.2')
+    repo.git.checkout('new_client')
 else:
     repo = Repo.init(os.getcwd())
 
