@@ -68,9 +68,8 @@ def update_popup(filenames: list[str]) -> None:
     popup.close()
 
 
-def auto_update() -> None:
+def auto_update() -> bool:
     """Updates the application from a github repo."""
-    print('Running auto-update script...')
     add_remote = git.bake('remote', 'add', '-f', '--tags', '-m', 'master',
                           '-t', 'master', 'origin',
                           'https://github.com/threadreaper/autodomme.git')
@@ -85,8 +84,12 @@ def auto_update() -> None:
 
     files = [line for line in git('--no-pager', 'diff', '--name-only',
                                   _iter=True)]
-    filenames = [filter_filename(file) for file in files[:-1]]
-    update_popup(filenames)
+    if files:
+        filenames = [filter_filename(file) for file in files[:-1]]
+        update_popup(filenames)
+        return True
+    else:
+        return False
 
 
 if __name__ == '__main__':

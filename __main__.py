@@ -285,8 +285,8 @@ if __name__ == '__main__':
     slideshow = server.slideshow
     time = t.time()
 
-    if client.options['UPDATES']:
-        auto_update()
+    if client.options['UPDATES'] and auto_update():
+        client.queue.put('Automatic update in progress.')
 
     while True:
         client.update()
