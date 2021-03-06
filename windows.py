@@ -70,7 +70,7 @@ def main_window(client) -> sG.Window:
 
     layout = [
         [sG.Menu(main_menu, tearoff=False, pad=(0, 0)),
-         sG.Image(None, size=(700, 500), background_color='#000000',
+         sG.Image(None, size=(900, 500), background_color='#000000',
                   k='IMAGE', pad=(0, 0)),
          sG.Column(sidebar, vertical_alignment='top', pad=(0, 0))],
         [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
@@ -80,7 +80,7 @@ def main_window(client) -> sG.Window:
                       k='CLIENT_STATUS')]
     ]
 
-    win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1024, 576),
+    win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1200, 675),
                     return_keyboard_events=True)
     win.finalize()
     win['INPUT'].expand(expand_y=True)
