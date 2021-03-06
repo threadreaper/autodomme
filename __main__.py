@@ -86,7 +86,7 @@ class Client:
         self.private_key, self.public_key = get_key_pair()
         self.socket = socket(AF_INET, SOCK_STREAM)
         self.socket.settimeout(5)
-        self.messages = list[str]
+        self.messages = list
         self.connected = False
         self.recv_lock = Lock()
         self.queue = SimpleQueue()
