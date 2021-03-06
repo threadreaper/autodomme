@@ -11,6 +11,7 @@ Pillow = "==8.1.0"
 PySimpleGUI = "==4.34.0"
 gitpython = "*"
 sh = "*"
+urllib3 = "*"
 
 [dev-packages]
 pytest = "*"
