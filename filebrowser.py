@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Custom filebrowser class and associated functions."""
+from __future__ import annotations
 import os
 from io import BytesIO
 

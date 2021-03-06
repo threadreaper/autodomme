@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Script parser for the AI domme"""
+from __future__ import annotations
+
 import re
 import os
 import sqlite3
