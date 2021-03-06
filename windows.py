@@ -84,6 +84,8 @@ def main_window(client) -> sG.Window:
                     return_keyboard_events=True)
     win.finalize()
     win['INPUT'].expand(expand_y=True)
+    win['IMAGE'].expand(False, True)
+    win['CHAT'].expand(False, True)
     win['SERVER_STATUS'].expand(True)
     win['HOST_FOLDER'].expand(False, True)
     win['SRV_FOLDER'].expand(False, True)
