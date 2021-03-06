@@ -80,7 +80,7 @@ def main_window(client) -> sG.Window:
                       k='CLIENT_STATUS')]
     ]
 
-    win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1280, 810),
+    win = sG.Window("TeaseAI", layout, margins=(0, 0), size=(1366, 768),
                     return_keyboard_events=True)
     win.finalize()
     win['INPUT'].expand(expand_y=True)
