@@ -59,7 +59,7 @@ def main_window(client) -> sG.Window:
         [sG.T(" Online Users:")],
         [sG.Multiline(size=(40, 3), k='ONLINE_USERS', do_not_clear=True,
                       auto_refresh=True, disabled=True)],
-        [sG.Multiline("", size=(40, 24), do_not_clear=True,
+        [sG.Multiline("", size=(40, 10), do_not_clear=True,
                       autoscroll=True, write_only=True, auto_refresh=True,
                       disabled=True, reroute_cprint=True, k='CHAT')],
         [sG.Input('', size=(24, 1), pad=((5, 0), 3), do_not_clear=False,

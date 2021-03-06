@@ -377,7 +377,7 @@ if __name__ == '__main__':
             opts.close()
         if not client.queue.empty():
             msg = client.queue.get(False)
-            sG.cprint(msg)
+            client.status = msg
         if not server.queue.empty():
             status = server.queue.get(False)
             client.server_status = status
