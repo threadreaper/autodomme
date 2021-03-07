@@ -133,3 +133,90 @@ class SlideShow():
 
 
 parse_images('/home/michael/projects/teaseai/icons')
+
+"""
+    Demo program that reroutes stdout and stderr.
+    Type something in the input box and click Print
+    Whatever you typed is "printed" using a standard print statement
+    Use the Output Element in your window layout to reroute stdout
+    You will see the output of the print in the Output Element in the center of the window
+    
+"""
+
+
+layout = [
+    [sg.Text('Type something in input field and click print')],
+    [sg.Input()],
+    [sg.Output()],
+    [sg.Button('Print')]
+]
+
+window = sg.Window('Reroute stdout', layout)
+
+while True:     # Event Loop
+    event, values = window.read()
+    if event == sg.WIN_CLOSED:
+        break
+    print('You typed: ', values[0])
+window.close()
+
+"""
+    Demo - the PySimpleGUI helpers (emojis)
+    The list of characters available to you to use in your messages.
+    They are used internally when you get an error or as the icon for windows like
+    the SDK help window.
+    
+    Copyright 2021 PySimpleGUI
+"""
+
+
+import PySimpleGUI as sg
+
+layout = [[sg.Text('The PySimpleGUI Helpers', font='_ 20')],
+          [sg.Text('Sometimes frustrated or tired....', font='_ 15')],
+          [sg.Image(data=emoji) for emoji in sg.EMOJI_BASE64_SAD_LIST],
+          [sg.Text('But they are usually happy!', font='_ 15')],
+          [sg.Image(data=emoji) for emoji in sg.EMOJI_BASE64_HAPPY_LIST],
+          [sg.Button('Bad Key'), sg.Button('Hello'), sg.Button('Exit')]  ]
+
+window = sg.Window('The PySimpleGUI Helpers', layout, icon=sg.EMOJI_BASE64_HAPPY_JOY, keep_on_top=True)
+
+while True:             # Event Loop
+    event, values = window.read()
+    print(event, values)
+    if event == sg.WIN_CLOSED or event == 'Exit':
+        break
+    if event == 'Bad Key':
+        elem = window['-IM-']
+    elif event == 'Hello':
+        sg.popup('Hi!', image=sg.EMOJI_BASE64_HAPPY_JOY, keep_on_top=True)
+
+window.close()
+
+import PySimpleGUI as sg
+
+'''
+A simple send/response chat window.  Add call to your send-routine and print the response
+If async responses can come in, then will need to use a different design that uses PySimpleGUI async design pattern
+'''
+
+sg.theme('GreenTan') # give our window a spiffy set of colors
+
+layout = [[sg.Text('Your output will go here', size=(40, 1))],
+          [sg.Output(size=(110, 20), font=('Helvetica 10'))],
+          [sg.Multiline(size=(70, 5), enter_submits=False, key='-QUERY-', do_not_clear=False),
+           sg.Button('SEND', button_color=(sg.YELLOWS[0], sg.BLUES[0]), bind_return_key=True),
+           sg.Button('EXIT', button_color=(sg.YELLOWS[0], sg.GREENS[0]))]]
+
+window = sg.Window('Chat window', layout, font=('Helvetica', ' 13'), default_button_element_size=(8,2), use_default_focus=False)
+
+while True:     # The Event Loop
+    event, value = window.read()
+    if event in (sg.WIN_CLOSED, 'EXIT'):            # quit if exit button or X
+        break
+    if event == 'SEND':
+        query = value['-QUERY-'].rstrip()
+        # EXECUTE YOUR COMMAND HERE
+        print('The command you entered was {}'.format(query), flush=True)
+
+window.close()

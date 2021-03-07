@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import pickle
+import sys
 import time as t
 from io import BytesIO
 from queue import SimpleQueue
@@ -16,14 +17,19 @@ from cryptography.hazmat.primitives.serialization import (Encoding,
                                                           PublicFormat,
                                                           load_pem_public_key)
 from PIL import Image, ImageOps
+from PyQt5.QtWidgets import QApplication
 
 import windows
 from crypto_functions import get_key_pair, open_package, send_package
 from filebrowser import FileBrowser
+from git_functions import auto_update
 from server import Server, SlideShow
 from server_browser import ServerBrowser
 from solitaire import MyGame, arcade
-from git_functions import auto_update
+
+app = QApplication(sys.argv)
+dw = app.desktop()
+res_x, res_y = dw.availableGeometry().width(), dw.availableGeometry().height()
 
 
 def load_options() -> sG.UserSettings:
@@ -78,6 +84,7 @@ class Client:
         """
         Initializes the client.
         """
+        self.res_x, self.res_y = res_x, res_y
         self.options = load_options()
         self.session = None
         self.address = (self.options['SERVER_ADDRESS'],
