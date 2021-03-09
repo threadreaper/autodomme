@@ -17,7 +17,8 @@ from cryptography.hazmat.primitives.serialization import (Encoding,
                                                           PublicFormat,
                                                           load_pem_public_key)
 from PIL import Image, ImageOps
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QScreen
 
 import windows
 from crypto_functions import get_key_pair, open_package, send_package
@@ -28,8 +29,8 @@ from server_browser import ServerBrowser
 from solitaire import MyGame, arcade
 
 app = QApplication(sys.argv)
-dw = app.desktop()
-res_x, res_y = dw.availableGeometry().width(), dw.availableGeometry().height()
+dw = QScreen(app).availableGeometry()
+res_x, res_y = dw.width(), dw.height()
 
 
 def load_options() -> sG.UserSettings:

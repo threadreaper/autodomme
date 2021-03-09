@@ -90,31 +90,28 @@ class Server(object):
         """
         try:
             if self.started is True:
-                self.queue.put('Error: Server is already running')
+                self.queue.put('Error: Server already running.')
             else:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.setsockopt(socket.SOL_SOCKET,
                                        socket.SO_REUSEADDR, 1)
                 self.socket.bind(self.address)
                 self.socket.listen(5)
-                self.queue.put("Server Set-Up Successful")
+                self.queue.put("Initialized.")
                 self.started = True
                 accept_thread = Thread(target=self._start_server, daemon=True)
                 accept_thread.start()
         except socket.error as error:
-            self.queue.put("Error....Unable to Set Up Sockets with"
-                           "{0}".format(error.strerror))
+            self.queue.put('Error: %s' % error.strerror)
             self.socket.close()
 
     def kill(self) -> None:
         """Shuts down a running server."""
         if self.started is True:
-            self.queue.put("Server shut down")
             self.started = False
             self.socket.shutdown(socket.SHUT_RDWR)
             self.socket.close()
-        else:
-            self.queue.put("Error: No Server is running.")
+            self.queue.put("Shut down.")
 
     def update(self):
         for person in self.clients:
@@ -166,7 +163,7 @@ class Server(object):
             try:
                 self.send_message(person, txt, 'MSG')
             except socket.error as error:
-                self.queue.put("Failed to BroadCast message - %s" % error)
+                self.queue.put("Error: %s" % error.strerror)
 
     def _validate_auth_packet(self, auth_packet: tuple[str, bytes],
                               person: Person) -> tuple[str, str]:
@@ -321,16 +318,15 @@ class Server(object):
 
     def _start_server(self) -> None:
         """Starts the server and handles incoming client connections."""
-        while True:
+        self.queue.put("Running with %s active clients." % len(
+            self.clients))
+        while self.started is True:
             try:
-                self.queue.put("Server running...")
                 request_socket, client_addr = self.socket.accept()
                 client_key = load_pem_public_key(request_socket.recv(833))
                 if isinstance(client_key, rsa.RSAPublicKey):
                     person = Person(client_addr, request_socket, client_key)
-                    self.queue.put(
-                        "Got a connection request from...{0}".format(
-                            client_addr))
+                    self.queue.put('Connection request from %s.' % client_addr)
                     handler = Thread(target=self._client_handler,
                                      args=(person,), daemon=True)
                     handler.start()
@@ -341,9 +337,7 @@ class Server(object):
                     self.queue.put("Connection rejected - bad key")
                     break
             except socket.error as error:
-                self.queue.put(
-                    "Error... Failed to send a request"
-                    "to the client {0}".format(error.strerror))
+                self.queue.put('Error: %s' % error.strerror)
 
     def new_user(self, user: str, password: str) -> None:
         """

@@ -1,6 +1,8 @@
 from __future__ import annotations
-import PySimpleGUI as sG
+
 import math
+
+import PySimpleGUI as sG
 
 
 def main_window(client) -> sG.Window:
@@ -55,30 +57,28 @@ def main_window(client) -> sG.Window:
                          sG.Tab('Server Media', tab3_layout)]]
 
     sidebar = [
-        [sG.T(" Online Users:", k='USER_LABEL')],
-        [sG.Multiline(size=(40, 3), k='ONLINE_USERS', do_not_clear=True,
-                      auto_refresh=True, disabled=True)],
-        [sG.Multiline('', size=(40, 10), do_not_clear=True, k='CHAT',
-                      write_only=True, reroute_cprint=True, autoscroll=True,
-                      auto_refresh=True)],
-        [sG.Input('', size=(24, 1), pad=((5, 0), 3), do_not_clear=False,
-                  k='INPUT'),
-         sG.Submit(size=(5, 1), pad=((0, 5), 3))],
-        [sG.TabGroup(tab_group_layout, k='TABS')]
+        [sG.vbottom(sG.T('Online Users:'))],
+        [sG.vbottom(sG.Output((37, 3), k='ONLINE_USERS'))],
+        [sG.Output(size=(37, 6), k='CHAT')],
+        [sG.vbottom(sG.In('', k='INPUT', size=(21, 1), font='ANY 14',
+                          pad=((5, 0), 3))),
+         sG.vbottom(sG.Button('Submit', size=(8, 1), k='Submit',
+                              pad=((0, 5), (4, 3)), font='ANY 9',
+                              use_ttk_buttons=True, bind_return_key=True))],
+        [sG.vbottom(sG.TabGroup(tab_group_layout, k='TABS'))],
     ]
 
-    """
-        [sG.Multiline("", size=(40, 16), do_not_clear=True,
-         autoscroll=True, write_only=True, auto_refresh=True,
-         disabled=True, reroute_cprint=True, k='CHAT')]
-    """
+    media = [
+        [sG.Image(size=(math.floor(client.res_x*0.8),
+                  math.floor(client.res_y*0.9)),
+                  k='IMAGE', pad=(0, 0),
+                  background_color='#000000')]
+    ]
 
     layout = [
-        [sG.Menu(main_menu, tearoff=False, pad=(0, 0)),
-         sG.Image(None, size=(math.floor(client.res_x*4/5), math.floor(client.res_y*0.85)),
-                  background_color='#000000',
-                  k='IMAGE', pad=(0, 0)),
-         sG.Column(sidebar, vertical_alignment='bottom', k='SIDEBAR', pad=(0, 0))],
+        [sG.Menu(main_menu, tearoff=False, pad=(0, 0))],
+        [sG.Frame('', media),
+         sG.Column(layout=sidebar, k='SIDEBAR')],
         [sG.StatusBar('', relief=sG.RELIEF_RIDGE, font='ANY 11',
                       size=(40, 1), pad=(5, (5, 5)), k='SERVER_STATUS'),
          sG.StatusBar('Not connected to any server', relief=sG.RELIEF_RIDGE,
@@ -86,22 +86,16 @@ def main_window(client) -> sG.Window:
                       k='CLIENT_STATUS')]
     ]
 
-    win = sG.Window("TeaseAI", layout, margins=(0, 0),
-                    location=(0, 0), size=(client.res_x, client.res_y),
-                    return_keyboard_events=True)
-    win.finalize()
-    status_height = win['CLIENT_STATUS'].get_size()[1]
-    win['SIDEBAR'].expand(True, True, True)
-    win['IMAGE'].set_size((None, client.res_y-status_height*7))
-    win['IMAGE'].expand(True, True, True)
+    win = sG.Window("TeaseAI", layout, margins=(0, 0), location=(0, 0),
+                    size=(client.res_x, client.res_y), resizable=True,
+                    finalize=True, return_keyboard_events=True)
+
+    win['IMAGE'].expand(True, True)
+    win['SIDEBAR'].expand(True, True)
+    win['ONLINE_USERS'].expand(True, False, True)
     win['CHAT'].expand(True, True, True)
     win['INPUT'].expand(True)
-    win['SERVER_STATUS'].expand(True)
-    win['HOST_FOLDER'].expand(False, True)
-    win['SRV_FOLDER'].expand(False, True)
-    win['HOST_BROWSE'].expand(True, True)
-    win['SRV_BROWSE'].expand(True, True)
-    win.finalize()
+    win['TABS'].expand(True)
 
     return win
 

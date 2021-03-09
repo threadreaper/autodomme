@@ -11,10 +11,10 @@ PySimpleGUI = "==4.34.0"
 gitpython = "*"
 sh = "*"
 urllib3 = "*"
-pyqt5 = "*"
 python-vlc = "*"
 opencv-python = "*"
 arcade = "*"
+pyside6 = "*"
 
 [dev-packages]
 pytest = "*"

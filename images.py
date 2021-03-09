@@ -220,3 +220,31 @@ while True:     # The Event Loop
         print('The command you entered was {}'.format(query), flush=True)
 
 window.close()
+
+
+"""TKOutput word wrap"""
+layout = [
+    [sg.Text('GameFinder', font=('Helvetica', 24, 'bold'))],
+    [sg.In(key='-IN-', size=(40,1)), sg.Button('Search')],
+    [sg.Output(key='-OUT-', size=(80, 20))],
+]
+
+window = sg.Window('Game Finder', layout, element_justification='center').finalize()
+window['-OUT-'].TKOut.output.config(wrap='word') # set Output element word wrapping
+
+print('''
+i am using PySimpleGUI as a tkinter wrapper and it works like a charm, but:
+
+When i am printing something to the output element it performs a linebreak whenever the given character limit per line is reached.
+
+Can i somehow change it to break line when it can't display the current word fully with the remaining line length?
+
+Cheers
+''')
+
+while True:
+    event, values = window.read()
+    if event == sg.WIN_CLOSED:
+        break
+
+window.close()

@@ -1,28 +1,39 @@
-#!/usr/bin/env python
-import PySimpleGUI as sg
+import sys
+from PySide6.QtWidgets import QApplication, QMainWindow
+from PySide6.QtCore import QTimer
 
-'''
-A simple send/response chat window.  Add call to your send-routine and print the response
-If async responses can come in, then will need to use a different design that uses PySimpleGUI async design pattern
-'''
+from main_window import UIBuilder
+from server import Server
 
-sg.theme('GreenTan') # give our window a spiffy set of colors
 
-layout = [[sg.Text('Your output will go here', size=(40, 1))],
-          [sg.Output(size=(110, 20), font=('Helvetica 10'))],
-          [sg.Multiline(size=(70, 5), enter_submits=False, key='-QUERY-', do_not_clear=False),
-           sg.Button('SEND', button_color=(sg.YELLOWS[0], sg.BLUES[0]), bind_return_key=True),
-           sg.Button('EXIT', button_color=(sg.YELLOWS[0], sg.GREENS[0]))]]
+class MainWindow(QMainWindow):
+    """Main application window"""
 
-window = sg.Window('Chat window', layout, font=('Helvetica', ' 13'), default_button_element_size=(8,2), use_default_focus=False)
+    def __init__(self) -> None:
+        """Constructs the main window"""
+        super(MainWindow, self).__init__()
+        self.ui = UIBuilder()
+        self.ui.setup(self)
+        self.server = Server()
+        self.ui.start_server.triggered.connect(self.server.set_up_server)
+        self.ui.kill_server.triggered.connect(self.server.kill)
+        self.server_queue = QTimer(self)
+        self.server_queue.timeout.connect(self.server_status)
+        self.server_queue.start(15)
 
-while True:     # The Event Loop
-    event, value = window.read()
-    if event in (sg.WIN_CLOSED, 'EXIT'):            # quit if exit button or X
-        break
-    if event == 'SEND':
-        query = value['-QUERY-'].rstrip()
-        # EXECUTE YOUR COMMAND HERE
-        print('The command you entered was {}'.format(query), flush=True)
+    def server_status(self):
+        if not self.server.queue.empty():
+            status = self.server.queue.get(False)
+            self.ui.server_status.setText("Server status: " + status)
 
-window.close()
+    def status_update(self, message):
+        self.ui.tooltip.setText(message)
+
+
+if __name__ == "__main__":
+    app = QApplication([])
+
+    window = MainWindow()
+    window.show()
+
+    sys.exit(app.exec_())
