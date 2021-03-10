@@ -1,3 +1,4 @@
+from __future__ import annotations
 from PySide6.QtCore import QMetaObject, Qt, QMargins
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
@@ -13,8 +14,10 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QLineEdit,
     QMainWindow,
-    QFrame,
+    QFormLayout,
     QGridLayout,
+    QDialogButtonBox,
+    QCheckBox,
 )
 
 EXP_EXP = QSizePolicy.Expanding, QSizePolicy.Expanding
@@ -24,18 +27,6 @@ EXP_FIX = QSizePolicy.Expanding, QSizePolicy.Fixed
 INFINITE = 16777215
 SUNKEN = "border: 2px inset #444;"
 NO_MARGIN = "margin: 0;"
-
-
-class VLine(QFrame):
-    """A simple VLine, like the one you get from designer."""
-
-    def __init__(self):
-        """Constructs the vertical line seperator."""
-        super(VLine, self).__init__()
-        self.setFrameShape(self.VLine)
-        self.setFrameShadow(self.Sunken)
-        self.setLineWidth(6)
-
 
 class UIBuilder(object):
     """Constructs the UI for a main application window"""
@@ -68,20 +59,20 @@ class UIBuilder(object):
         self.centralwidget.setContentsMargins(QMargins(0, 0, 0, 0))
 
         self.centralwidget.setSizePolicy(*EXP_EXP)
-        self.gridLayout = QGridLayout(self.centralwidget)
+        self.grid_layout = QGridLayout(self.centralwidget)
 
         self.media = QLabel("", self.centralwidget)
         self.media.setObjectName("media")
         self.media.setSizePolicy(*EXP_EXP)
         self.media.setMinimumSize(200, 200)
         self.media.setStyleSheet("background: #000;")
-        self.gridLayout.addWidget(self.media, 0, 0, 5, 1)
+        self.grid_layout.addWidget(self.media, 0, 0, 5, 1)
 
         self.users_label = QLabel(" Online users:", self.centralwidget)
         self.users_label.setObjectName("users_label")
         self.users_label.setMinimumSize(300, 15)
         self.users_label.setMaximumSize(300, 15)
-        self.gridLayout.addWidget(self.users_label, 0, 1, 1, 2)
+        self.grid_layout.addWidget(self.users_label, 0, 1, 1, 2)
 
         self.online = QPlainTextEdit("", self.centralwidget)
         self.online.setObjectName("online")
@@ -94,7 +85,7 @@ class UIBuilder(object):
         self.online.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.online.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
         self.online.setReadOnly(True)
-        self.gridLayout.addWidget(self.online, 1, 1, 1, 2)
+        self.grid_layout.addWidget(self.online, 1, 1, 1, 2)
 
         self.chat = QPlainTextEdit("", self.centralwidget)
         self.chat.setObjectName("chat")
@@ -105,7 +96,7 @@ class UIBuilder(object):
         self.chat.setLineWidth(2)
         self.chat.setReadOnly(True)
         self.chat.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.gridLayout.addWidget(self.chat, 2, 1, 1, 2)
+        self.grid_layout.addWidget(self.chat, 2, 1, 1, 2)
 
         self.input = QLineEdit(self.centralwidget)
         self.input.setObjectName("input")
@@ -115,14 +106,14 @@ class UIBuilder(object):
         self.input.setStyleSheet(SUNKEN)
         self.input.setEchoMode(QLineEdit.Normal)
         self.input.setClearButtonEnabled(True)
-        self.gridLayout.addWidget(self.input, 3, 1, 1, 1)
+        self.grid_layout.addWidget(self.input, 3, 1, 1, 1)
 
         self.submit = QPushButton("Submit", self.centralwidget)
         self.submit.setObjectName("submit")
         self.submit.setSizePolicy(*FIX_FIX)
         self.submit.setMinimumSize(70, 30)
         self.submit.setMaximumSize(70, 30)
-        self.gridLayout.addWidget(self.submit, 3, 2, 1, 1)
+        self.grid_layout.addWidget(self.submit, 3, 2, 1, 1)
 
         self.tabs = QTabWidget(self.centralwidget)
         self.tabs.setObjectName("tabs")
@@ -138,7 +129,7 @@ class UIBuilder(object):
         self.tab3 = QWidget()
         self.tab3.setObjectName("tab3")
         self.tabs.addTab(self.tab3, "Server Media")
-        self.gridLayout.addWidget(self.tabs, 4, 1, 1, 2)
+        self.grid_layout.addWidget(self.tabs, 4, 1, 1, 2)
         main_window.setCentralWidget(self.centralwidget)
 
         self.menubar = QMenuBar(main_window)
@@ -206,4 +197,58 @@ class UIBuilder(object):
             + "margin-right: 2px;\
             margin-left: 2px;"
         )
-        self.statusbar.messageChanged.connect(main_window.status_update)
+        self.statusbar.messageChanged.connect(main_window.status_tip)
+
+
+class LoginBuilder(object):
+    """Constructs a login window."""
+    def setup(self, dialog):
+        dialog.resize(320, 132)
+        dialog.setModal(True)
+        dialog.setWindowTitle("Please Login to Continue")
+        self.form_layout = QFormLayout(dialog)
+        self.form_layout.setObjectName("formLayout")
+        self.login_label = QLabel('Server requesting authentication', dialog)
+        self.login_label.setObjectName("login_label")
+        self.form_layout.setWidget(0, QFormLayout.SpanningRole,
+                                   self.login_label)
+
+        self.username_label = QLabel(dialog)
+        self.username_label.setObjectName("username_label")
+        self.form_layout.setWidget(1, QFormLayout.LabelRole,
+                                   self.username_label)
+
+        self.username = QLineEdit(dialog)
+        self.username.setObjectName("username")
+        self.username.setStatusTip("Enter your username.")
+        self.form_layout.setWidget(1, QFormLayout.FieldRole, self.username)
+
+        self.password_label = QLabel(dialog)
+        self.password_label.setObjectName("password_label")
+        self.form_layout.setWidget(2, QFormLayout.LabelRole,
+                                   self.password_label)
+
+        self.password = QLineEdit(dialog)
+        self.password.setObjectName("password")
+        self.password.setStatusTip("Enter your password.")
+        self.password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        self.form_layout.setWidget(2, QFormLayout.FieldRole, self.password)
+
+        self.save_username = QCheckBox('&Save username', dialog)
+        self.save_username.setObjectName("save_username")
+        self.form_layout.setWidget(3, QFormLayout.FieldRole,
+                                   self.save_username)
+
+        self.button_box = QDialogButtonBox(dialog)
+        self.button_box.setObjectName("button_box")
+        self.button_box.setOrientation(Qt.Horizontal)
+        self.button_box.setStandardButtons(
+            QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
+        self.form_layout.setWidget(4, QFormLayout.SpanningRole,
+                                   self.button_box)
+
+        self.button_box.accepted.connect(dialog.accept)
+        self.button_box.rejected.connect(dialog.close)
+
+        QMetaObject.connectSlotsByName(dialog)

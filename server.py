@@ -65,9 +65,6 @@ class Server(object):
         - broadcast(): Sends a chat message to all connected clients.
         - new_user(): Creates a new user in the database.
         - broadcast_image(): Displays an image to all connected clients.
-        - queue.empty(): Returns True if the queue is empty, False
-        otherwise.
-        - queue.get(): Returns the oldest server status message.
         """
 
         self.host = self.opt_get('hostname')
@@ -240,6 +237,7 @@ class Server(object):
         msg_type, options = self.recv(person)
         if msg_type == 'SES':
             person.options = pickle.loads(options)
+            print(person.options)
         if len(self.clients) == 0:
             person.ops = True
             person.name = '@%s' % person.options['CHAT_NAME']
@@ -326,7 +324,7 @@ class Server(object):
                 client_key = load_pem_public_key(request_socket.recv(833))
                 if isinstance(client_key, rsa.RSAPublicKey):
                     person = Person(client_addr, request_socket, client_key)
-                    self.queue.put('Connection request from %s.' % client_addr)
+                    self.queue.put('Connection request from %s.' % client_addr[0])
                     handler = Thread(target=self._client_handler,
                                      args=(person,), daemon=True)
                     handler.start()

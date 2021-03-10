@@ -17,8 +17,6 @@ from cryptography.hazmat.primitives.serialization import (Encoding,
                                                           PublicFormat,
                                                           load_pem_public_key)
 from PIL import Image, ImageOps
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QScreen
 
 import windows
 from crypto_functions import get_key_pair, open_package, send_package
@@ -27,45 +25,6 @@ from git_functions import auto_update
 from server import Server, SlideShow
 from server_browser import ServerBrowser
 from solitaire import MyGame, arcade
-
-app = QApplication(sys.argv)
-dw = QScreen(app).availableGeometry()
-res_x, res_y = dw.width(), dw.height()
-
-
-def load_options() -> sG.UserSettings:
-    """
-    Load the config file or load defaults
-
-    :return: An instance of `PySimpleGUI.UserSettings`
-    :rtype: :class:`PySimpleGUI.UserSettings`
-    """
-    defaults = {
-        'THEME': '15. DarkBlue12',
-        'USERNAME': None,
-        'SAVE_CREDENTIALS': True,
-        'CHAT_NAME': 'Sub',
-        'SERVER_PORT': 1337,
-        'SERVER_ADDRESS': '127.0.0.1',
-        'HOSTNAME': '0.0.0.0',
-        'HOST_PORT': 1337,
-        'DOMME_NAME': 'Domme',
-        'HOST_FOLDER': os.path.expanduser('~'),
-        'BOOBS_FOLDER': os.path.expanduser('~'),
-        'BUTTS_FOLDER': os.path.expanduser('~'),
-        'UPDATES': False
-    }
-    settings = os.getcwd() + '/config.json'
-    sG.user_settings_filename(settings)
-    if sG.user_settings_file_exists(settings):
-        for k, v in defaults.items():
-            if k not in sG.user_settings().keys():
-                sG.user_settings_set_entry(k, v)
-    else:
-        for k, v in defaults.items():
-            sG.user_settings_set_entry(k, v)
-    return sG.UserSettings(settings)
-
 
 class Client:
     """Client object for communication with server."""
@@ -85,7 +44,6 @@ class Client:
         """
         Initializes the client.
         """
-        self.res_x, self.res_y = res_x, res_y
         self.options = load_options()
         self.session = None
         self.address = (self.options['SERVER_ADDRESS'],
