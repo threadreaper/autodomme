@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "teaseai"
+version = "0.1.0"
+description = ""
+authors = ["threadreaper <threadreaper@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9,<3.10"
+PySide6 = "^6.0.2"
+opencv-python = "^4.5.1"
+cryptography = "^3.4.6"
+Pillow = "^8.1.2"
+PySide2 = "^5.15.2"
+python-vlc = "^3.0.11115"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.2"
+black = "^20.8b1"
+pylint = "^2.7.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

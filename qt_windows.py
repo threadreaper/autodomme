@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QDialogButtonBox,
     QCheckBox,
+    QFrame
 )
 
 EXP_EXP = QSizePolicy.Expanding, QSizePolicy.Expanding
@@ -44,6 +45,19 @@ class UIBuilder(object):
         main_window.setSizePolicy(*EXP_EXP)
         main_window.setTabShape(QTabWidget.Rounded)
 
+        self.menubar = QMenuBar(main_window)
+        self.menubar.setObjectName("menubar")
+        self.menubar.setGeometry(0, 0, 1137, 23)
+        self.file_menu = QMenu("File", self.menubar)
+        self.file_menu.setObjectName("file_menu")
+        self.server_menu = QMenu("Server", self.menubar)
+        self.server_menu.setObjectName("server_menu")
+        self.options_menu = QMenu("Options", self.menubar)
+        self.options_menu.setObjectName("options_menu")
+        self.media_menu = QMenu("Media", self.menubar)
+        self.media_menu.setObjectName("media_menu")
+        main_window.setMenuBar(self.menubar)
+
         self.exit = QAction("Exit", main_window)
         self.exit.setObjectName("exit")
         self.start_server = QAction("Start Server", main_window)
@@ -54,14 +68,16 @@ class UIBuilder(object):
         self.kill_server.setObjectName("kill_server")
         self.options = QAction("Options", main_window)
         self.options.setObjectName("options")
+        self.start_webcam = QAction("Start Webcam", main_window)
+        self.start_webcam.setObjectName("start_webcam")
+        self.start_webcam.setCheckable(False)
         self.centralwidget = QWidget(main_window)
         self.centralwidget.setObjectName("centralwidget")
         self.centralwidget.setContentsMargins(QMargins(0, 0, 0, 0))
-
         self.centralwidget.setSizePolicy(*EXP_EXP)
         self.grid_layout = QGridLayout(self.centralwidget)
 
-        self.media = QLabel("", self.centralwidget)
+        self.media = QFrame(self.centralwidget)
         self.media.setObjectName("media")
         self.media.setSizePolicy(*EXP_EXP)
         self.media.setMinimumSize(200, 200)
@@ -132,17 +148,6 @@ class UIBuilder(object):
         self.grid_layout.addWidget(self.tabs, 4, 1, 1, 2)
         main_window.setCentralWidget(self.centralwidget)
 
-        self.menubar = QMenuBar(main_window)
-        self.menubar.setObjectName("menubar")
-        self.menubar.setGeometry(0, 0, 1137, 23)
-        self.file_menu = QMenu("File", self.menubar)
-        self.file_menu.setObjectName("file_menu")
-        self.server_menu = QMenu("Server", self.menubar)
-        self.server_menu.setObjectName("server_menu")
-        self.options_menu = QMenu("Options", self.menubar)
-        self.options_menu.setObjectName("options_menu")
-        main_window.setMenuBar(self.menubar)
-
         self.statusbar = QStatusBar(main_window)
         self.statusbar.setObjectName("statusbar")
         self.statusbar.setEnabled(True)
@@ -156,11 +161,13 @@ class UIBuilder(object):
         self.menubar.addAction(self.file_menu.menuAction())
         self.menubar.addAction(self.server_menu.menuAction())
         self.menubar.addAction(self.options_menu.menuAction())
+        self.menubar.addAction(self.media_menu.menuAction())
         self.file_menu.addAction(self.exit)
         self.server_menu.addAction(self.start_server)
         self.server_menu.addAction(self.connect_server)
         self.server_menu.addAction(self.kill_server)
         self.options_menu.addAction(self.options)
+        self.media_menu.addAction(self.start_webcam)
         self.exit.triggered.connect(main_window.close)
         self.tabs.setCurrentIndex(0)
         QMetaObject.connectSlotsByName(main_window)
@@ -169,6 +176,7 @@ class UIBuilder(object):
         self.connect_server.setStatusTip("Connect to a remote server.")
         self.kill_server.setStatusTip("Shut down a running local server.")
         self.options.setStatusTip("Open the options menu.")
+        self.start_webcam.setStatusTip("Start webcam feed.")
         self.tooltip = QLabel("", self.statusbar)
         tooltip_policy = QSizePolicy(*EXP_FIX)
         tooltip_policy.setHorizontalStretch(100)

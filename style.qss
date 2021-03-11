@@ -1,0 +1,178 @@
+/*
+YoRHa Theme for RPCS3
+by Ani @ https://github.com/AniLeo
+r1 (2018.02.27)
+*/
+
+/*
+Color Scheme
+- Pod Programs
+8c806a
+bd9d86
+c1b398
+eadfb1
+ebe4d2
+- Light
+b3ac98
+aea993
+- Dark
+4d4940
+*/
+
+
+/* Every widget */
+QWidget {
+	font-family: SCE-PS3 Rodin LATIN;
+	font-size: 9.00pt;
+	color: #292929;
+	background: transparent;
+	alternate-background-color: transparent;
+}
+
+
+
+/* Log+TTY: Use flat dark color background with default font for better readability */
+QFrame#chat {
+	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
+}
+
+/* Mouse Tooltips */
+QToolTip {
+	background-color: #b3ac98;
+	color: #4d4940;
+	border: 0.10em solid #4d4940;
+}
+
+/* Main Window and Dialogs */
+QDialog, QMainWindow {
+	border-image: url("YoRHa-background.jpg");
+}
+
+QTabBar::tab {
+	background: #4d4940;
+	color: #aea993;
+    font-size: 8pt;
+	font-weight: 450;
+    padding: 6px;
+    text-transform: uppercase;
+}
+
+QTabBar::tab:!selected:hover {
+    background:  #aea993;
+	color:#4d4940;
+}
+QTabBar::tab::selected {
+    background: transparent;
+	color: #4d4940;
+	border-bottom-style: solid;
+
+}
+
+QFrame#chat, QFrame#online {
+    background: #4d4940;
+	color: #aea993;
+}
+
+QCheckBox::indicator {
+	border: 0.05em solid #4d4940;
+}
+QCheckBox::indicator::unchecked {
+	background-color: #b3ac98;
+}
+QCheckBox::indicator::checked {
+	background-color: #4d4940;
+}
+QCheckBox::indicator::disabled {
+	background-color: #828790;
+}
+QCheckBox::item::selected {
+	color: #4d4940;
+}
+
+
+/* Checkboxes */
+QCheckBox::indicator {
+	border-radius: 0.1em;
+	border: 0.05em solid #4d4940;
+	margin-top: 0.05em;
+	width: 0.8em;
+	height: 0.8em;
+}
+QCheckBox::indicator:checked {
+	background-color: #4d4940; /* Dark */
+}
+QCheckBox::indicator:unchecked {
+	background-color: #b3ac98; /* Light */
+}
+QCheckBox::indicator::disabled {
+	background-color: #828790; /* Gray */
+}
+
+
+/* Combo Boxes */
+QComboBox {
+	background: transparent;
+	color: #4d4940;
+	border: 0.05em solid #1e1e1e;
+	border-radius: 0.15em;
+	padding-bottom: 0.2em;
+	padding-left: 0.4em;
+}
+QComboBox QAbstractItemView {
+	background: #b3ac98;
+}
+QComboBox::disabled {
+	background: #828790;
+	color: #4d4940;
+}
+
+
+
+/* Buttons */
+QPushButton {
+	background: #b3ac98;
+}
+QPushButton::disabled {
+	background: #828790;
+}
+
+
+/* Log and Debugger borders */
+QTextEdit {
+	border: 0.05em solid #4d4940;
+}
+
+/* Top menu bar */
+QMenuBar {
+	text-transform: uppercase;
+}
+QMenuBar::item:selected {
+	background: #4d4940;
+	color: #aea993
+}
+QMenu {
+	background: #b3ac98;
+	color: #4d4940;
+}
+QMenu::item:selected {
+	background: #4d4940;
+	color: #aea993;
+	border: 0.05em solid #4d4940;
+}
+QMenu::item:disabled {
+	background-color: #828790;
+	color: #4d4940;
+}
+
+
+/* Pad Settings: Controller Image */
+QLabel {
+	color: #4d4940;
+}
+
+/* Search bar on main Toolbar */
+QLineEdit {
+	color: #4d4940;
+	font-size: 10.25pt;
+}

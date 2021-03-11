@@ -2,18 +2,6 @@ import PySimpleGUI as sg
 import cv2
 import numpy as np
 
-"""
-Demo program that displays a webcam using OpenCV and applies some very basic image functions
-- functions from top to bottom -
-none:       no processing
-threshold:  simple b/w-threshold on the luma channel, slider sets the threshold value
-canny:      edge finding with canny, sliders set the two threshold values for the function => edge sensitivity
-blur:       simple Gaussian blur, slider sets the sigma, i.e. the amount of blur smear
-hue:        moves the image hue values by the amount selected on the slider
-enhance:    applies local contrast enhancement on the luma channel to make the image fancier - slider controls fanciness.
-"""
-
-
 def main():
     sg.theme('LightGreen')
 

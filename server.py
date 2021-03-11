@@ -77,6 +77,7 @@ class Server(object):
         self.private_key, self.public_key = get_key_pair()
         self.client_lock = Lock()
         self.queue = SimpleQueue()
+        self.queue.put('Not Started.')
         self.slideshow = SlideShow(self.path, self)
         self.ai = AI(self)
 
@@ -237,7 +238,6 @@ class Server(object):
         msg_type, options = self.recv(person)
         if msg_type == 'SES':
             person.options = pickle.loads(options)
-            print(person.options)
         if len(self.clients) == 0:
             person.ops = True
             person.name = '@%s' % person.options['CHAT_NAME']
