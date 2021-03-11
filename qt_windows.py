@@ -1,24 +1,27 @@
 from __future__ import annotations
-from PySide6.QtCore import QMetaObject, Qt, QMargins
-from PySide6.QtGui import QAction
+
+import test_rc
+from PySide6.QtCore import QMargins, QMetaObject, QSize, Qt
+from PySide6.QtGui import QAction, QCursor, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
+    QCheckBox,
+    QDialogButtonBox,
+    QFormLayout,
+    QFrame,
+    QGridLayout,
     QLabel,
-    QMenu,
-    QMenuBar,
-    QPushButton,
-    QSizePolicy,
-    QStatusBar,
-    QWidget,
-    QPlainTextEdit,
-    QTabWidget,
     QLineEdit,
     QMainWindow,
-    QFormLayout,
-    QGridLayout,
-    QDialogButtonBox,
-    QCheckBox,
-    QFrame
+    QMenu,
+    QMenuBar,
+    QPlainTextEdit,
+    QPushButton,
+    QSizePolicy,
+    QSlider,
+    QStatusBar,
+    QTabWidget,
+    QWidget,
 )
 
 EXP_EXP = QSizePolicy.Expanding, QSizePolicy.Expanding
@@ -28,6 +31,9 @@ EXP_FIX = QSizePolicy.Expanding, QSizePolicy.Fixed
 INFINITE = 16777215
 SUNKEN = "border: 2px inset #444;"
 NO_MARGIN = "margin: 0;"
+SEVENTY_FIVE = QSize(75, 75)
+SIXTY_FOUR = QSize(64, 64)
+
 
 class UIBuilder(object):
     """Constructs the UI for a main application window"""
@@ -49,13 +55,13 @@ class UIBuilder(object):
         self.menubar.setObjectName("menubar")
         self.menubar.setGeometry(0, 0, 1137, 23)
         self.file_menu = QMenu("File", self.menubar)
-        self.file_menu.setObjectName("file_menu")
+        self.file_menu.setObjectName("file_men")
         self.server_menu = QMenu("Server", self.menubar)
-        self.server_menu.setObjectName("server_menu")
+        self.server_menu.setObjectName("server_men")
         self.options_menu = QMenu("Options", self.menubar)
-        self.options_menu.setObjectName("options_menu")
+        self.options_menu.setObjectName("options_men")
         self.media_menu = QMenu("Media", self.menubar)
-        self.media_menu.setObjectName("media_menu")
+        self.media_menu.setObjectName("media_men")
         main_window.setMenuBar(self.menubar)
 
         self.exit = QAction("Exit", main_window)
@@ -108,7 +114,9 @@ class UIBuilder(object):
         self.chat.setSizePolicy(*FIX_EXP)
         self.chat.setMinimumSize(300, 0)
         self.chat.setMaximumSize(300, INFINITE)
-        self.chat.setStyleSheet("margin-bottom: 3px; margin-top: 8px;" + SUNKEN)
+        self.chat.setStyleSheet(
+            "margin-bottom: 3px; margin-top: 8px;" + SUNKEN
+        )
         self.chat.setLineWidth(2)
         self.chat.setReadOnly(True)
         self.chat.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -144,6 +152,95 @@ class UIBuilder(object):
         self.tabs.addTab(self.tab2, "My Media")
         self.tab3 = QWidget()
         self.tab3.setObjectName("tab3")
+        self.tab3.setSizePolicy(*FIX_FIX)
+        self.grid_layout2 = QGridLayout(self.tab3)
+        self.grid_layout2.setHorizontalSpacing(0)
+        self.grid_layout2.setVerticalSpacing(3)
+        self.grid_layout2.setContentsMargins(3, -1, 3, -1)
+        self.server_folder = QLineEdit(self.tab3)
+        self.server_folder.setObjectName("server_folder")
+
+        self.grid_layout2.addWidget(self.server_folder, 0, 0, 1, 3)
+        self.srv_browse = QPushButton("BROWSE", self.tab3)
+        self.srv_browse.setObjectName("srv_browse")
+        self.srv_browse.setStyleSheet(
+            "background: transparent;\n"
+            "	color: #4d4940;\n"
+            "    font-size: 8pt;\n"
+            "	font-weight: 450;\n"
+            "    padding: 6px;\n"
+        )
+
+        self.grid_layout2.addWidget(self.srv_browse, 0, 3, 1, 1)
+
+        self.back_button = QPushButton("", self.tab3)
+        self.back_button.setObjectName("back_button")
+        self.back_button.setSizePolicy(*FIX_FIX)
+        self.back_button.setMaximumSize(SEVENTY_FIVE)
+        self.back_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.back_button.setStyleSheet(
+            "border: 0;\n" "background: transparent;"
+        )
+        icon = QIcon()
+        icon.addFile(
+            ":/newPrefix/back_button.png", SIXTY_FOUR, QIcon.Normal, QIcon.Off
+        )
+        self.back_button.setIcon(icon)
+        self.back_button.setIconSize(SIXTY_FOUR)
+
+        self.grid_layout2.addWidget(self.back_button, 1, 0, 1, 1)
+
+        self.play_button = QPushButton("", self.tab3)
+        self.play_button.setObjectName("play_button")
+        self.play_button.setSizePolicy(*FIX_FIX)
+        self.play_button.setMaximumSize(SEVENTY_FIVE)
+        self.play_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.play_button.setStyleSheet(
+            "border: 0;\n" "background: transparent;"
+        )
+        icon1 = QIcon()
+        icon1.addFile(
+            ":/newPrefix/play_button.png", SIXTY_FOUR, QIcon.Normal, QIcon.Off
+        )
+        self.play_button.setIcon(icon1)
+        self.play_button.setIconSize(SIXTY_FOUR)
+
+        self.grid_layout2.addWidget(self.play_button, 1, 1, 1, 1)
+
+        self.stop_button = QPushButton("", self.tab3)
+        self.stop_button.setObjectName("stop_button")
+        self.stop_button.setSizePolicy(*FIX_FIX)
+        self.stop_button.setMaximumSize(SEVENTY_FIVE)
+        self.stop_button.setCursor(QCursor(Qt.PointingHandCursor))
+        self.stop_button.setStyleSheet(
+            "border: 0;\n" "background: transparent;"
+        )
+        icon2 = QIcon()
+        icon2.addFile(
+            ":/newPrefix/stop_button.png", SIXTY_FOUR, QIcon.Normal, QIcon.Off
+        )
+        self.stop_button.setIcon(icon2)
+        self.stop_button.setIconSize(SIXTY_FOUR)
+
+        self.grid_layout2.addWidget(self.stop_button, 1, 2, 1, 1)
+
+        self.fast_forward = QPushButton("", self.tab3)
+        self.fast_forward.setObjectName("fast_forward")
+        self.fast_forward.setSizePolicy(*FIX_FIX)
+        self.fast_forward.setMaximumSize(SEVENTY_FIVE)
+        self.fast_forward.setCursor(QCursor(Qt.PointingHandCursor))
+        self.fast_forward.setStyleSheet(
+            "border: 0;\n" "background: transparent;"
+        )
+        icon3 = QIcon()
+        icon3.addFile(
+            ":/newPrefix/fast_forward.png", SIXTY_FOUR, QIcon.Normal, QIcon.Off
+        )
+        self.fast_forward.setIcon(icon3)
+        self.fast_forward.setIconSize(SIXTY_FOUR)
+
+        self.grid_layout2.addWidget(self.fast_forward, 1, 3, 1, 1)
+
         self.tabs.addTab(self.tab3, "Server Media")
         self.grid_layout.addWidget(self.tabs, 4, 1, 1, 2)
         main_window.setCentralWidget(self.centralwidget)
@@ -210,21 +307,24 @@ class UIBuilder(object):
 
 class LoginBuilder(object):
     """Constructs a login window."""
+
     def setup(self, dialog):
         dialog.resize(320, 132)
         dialog.setModal(True)
         dialog.setWindowTitle("Please Login to Continue")
         self.form_layout = QFormLayout(dialog)
         self.form_layout.setObjectName("formLayout")
-        self.login_label = QLabel('Server requesting authentication', dialog)
+        self.login_label = QLabel("Server requesting authentication", dialog)
         self.login_label.setObjectName("login_label")
-        self.form_layout.setWidget(0, QFormLayout.SpanningRole,
-                                   self.login_label)
+        self.form_layout.setWidget(
+            0, QFormLayout.SpanningRole, self.login_label
+        )
 
         self.username_label = QLabel(dialog)
         self.username_label.setObjectName("username_label")
-        self.form_layout.setWidget(1, QFormLayout.LabelRole,
-                                   self.username_label)
+        self.form_layout.setWidget(
+            1, QFormLayout.LabelRole, self.username_label
+        )
 
         self.username = QLineEdit(dialog)
         self.username.setObjectName("username")
@@ -233,8 +333,9 @@ class LoginBuilder(object):
 
         self.password_label = QLabel(dialog)
         self.password_label.setObjectName("password_label")
-        self.form_layout.setWidget(2, QFormLayout.LabelRole,
-                                   self.password_label)
+        self.form_layout.setWidget(
+            2, QFormLayout.LabelRole, self.password_label
+        )
 
         self.password = QLineEdit(dialog)
         self.password.setObjectName("password")
@@ -242,19 +343,22 @@ class LoginBuilder(object):
         self.password.setEchoMode(QLineEdit.PasswordEchoOnEdit)
         self.form_layout.setWidget(2, QFormLayout.FieldRole, self.password)
 
-        self.save_username = QCheckBox('&Save username', dialog)
+        self.save_username = QCheckBox("&Save username", dialog)
         self.save_username.setObjectName("save_username")
-        self.form_layout.setWidget(3, QFormLayout.FieldRole,
-                                   self.save_username)
+        self.form_layout.setWidget(
+            3, QFormLayout.FieldRole, self.save_username
+        )
 
         self.button_box = QDialogButtonBox(dialog)
         self.button_box.setObjectName("button_box")
         self.button_box.setOrientation(Qt.Horizontal)
         self.button_box.setStandardButtons(
-            QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+            QDialogButtonBox.Cancel | QDialogButtonBox.Ok
+        )
 
-        self.form_layout.setWidget(4, QFormLayout.SpanningRole,
-                                   self.button_box)
+        self.form_layout.setWidget(
+            4, QFormLayout.SpanningRole, self.button_box
+        )
 
         self.button_box.accepted.connect(dialog.accept)
         self.button_box.rejected.connect(dialog.close)

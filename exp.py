@@ -75,9 +75,12 @@ class MainWindow(QMainWindow):
         self.inter.kill_server.triggered.connect(self.server.kill)  # type: ignore
         self.inter.connect_server.triggered.connect(self.client.connect)  # type: ignore
         self.inter.start_webcam.triggered.connect(self.client.play_media)  # type: ignore
+        self.inter.play_button.clicked.connect(self.player.play_pause)
+        self.inter.stop_button.clicked.connect(self.player.stop)
         self.update_timer = QTimer(self)
         self.update_timer.timeout.connect(self.update)  # type: ignore
         self.update_timer.start(15)
+        self.player = Player(self.inter.media)
 
     def update(self) -> None:
         """Updates the GUI."""
@@ -188,7 +191,7 @@ class Client:
         if media is None:
             media = "/mnt/veracrypt1/video/softcore/belakazar.mp4"
         if not checked:
-            player = Player(self.window.inter.media)
+
             # video_thread = Video(self.window, self, media)
             # video_thread.start()
 
