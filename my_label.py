@@ -61,16 +61,12 @@ class MediaLabel(QLabel):
 
         :param new_pix: The `QPixmap` to be scaled.
         """
-        if (new_pix.size().width() <= self.size().width()
-            and new_pix.size().height() <= self.size().height()):
-            return new_pix
-        if (max(new_pix.size().width(), new_pix.size().height())
-                == new_pix.size().width()):
-            return new_pix.scaledToWidth(self.contentsRect().width(),
-                                         Qt.SmoothTransformation)
-        else:
-            return new_pix.scaledToHeight(self.contentsRect().height(),
-                                          Qt.SmoothTransformation)
+        self.updateGeometry()
+        if (new_pix.size().width() > self.size().width() or
+            new_pix.size().height() > self.size().height()):
+            return new_pix.scaled(self.size(), Qt.KeepAspectRatio, # type: ignore
+                                  Qt.SmoothTransformation)
+        return new_pix
 
     def refresh_files(self) -> list[str]:
         """Updates the file list when the directory is changed.
@@ -85,7 +81,6 @@ class MediaLabel(QLabel):
     def resizeEvent(self, event: QResizeEvent) -> None: # pylint: disable=unused-argument, invalid-name
         """Updates the geometry of the widget and reloads the current pixmap
         when the widget gets resized."""
-        print('firing resize')
         self.updateGeometry()
         self.reload()
 
@@ -129,6 +124,7 @@ class MediaLabel(QLabel):
             self.dirty = False
 
     def apply_transforms(self):
+        """Re-apply transforms when saving or reloading a scaled pixmap."""
         pix = QPixmap(self.filename)
         for transform in self.transforms:
             if transform == 'right':
@@ -142,20 +138,20 @@ class MediaLabel(QLabel):
     def rotate_right(self) -> None:
         """Rotate the current image 90 degrees to the right and prompts the
         user to save the modified image."""
-        new_pix = self.pixmap().transformed(QTransform().rotate(90)) #type: ignore
+        self.setPixmap(self.pixmap().transformed(QTransform().rotate(90))) #type: ignore
         if self.pixmap_is_scaled:
             self.transforms.append('right')
         self.dirty = True
-        self.update_pixmap(new_pix)
+        self.reload()
 
     def rotate_left(self) -> None:
         """Rotate the current image 90 degrees to the left and prompts the
         user to save the modified image."""
-        new_pix = self.pixmap().transformed(QTransform().rotate(-90)) #type: ignore
+        self.setPixmap(self.pixmap().transformed(QTransform().rotate(-90))) #type: ignore
         if self.pixmap_is_scaled:
             self.transforms.append('left')
         self.dirty = True
-        self.update_pixmap(new_pix)
+        self.reload()
 
     def delete(self) -> None:
         """Deletes the current image from the file system."""
