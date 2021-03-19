@@ -46,16 +46,28 @@ class MainWindow(QMainWindow):
         self.setIconSize(QSize(32, 32))
         self.inter.setupUi(self)
         self.radios = {
-            self.inter.ass: {'this': 'ass', 'that': 'assExposed', 'reset': self.inter.ass_reset},
-            self.inter.assExposed: {'this': 'assExposed', 'that': 'ass', 'reset': self.inter.ass_reset},
-            self.inter.breasts: {'this': 'breasts', 'that': 'breastsExposed', 'reset': self.inter.breasts_reset},
-            self.inter.breastsExposed: {'this': 'breastsExposed', 'that': 'breasts', 'reset': self.inter.breasts_reset},
-            self.inter.pussy: {'this': 'pussy', 'that': 'pussyExposed', 'reset': self.inter.pussy_reset},
-            self.inter.pussyExposed: {'this': 'pussyExposed', 'that': 'pussy', 'reset': self.inter.pussy_reset},
-            self.inter.fullyClothed: {'this': 'fullyClothed', 'that': 'fullyNude', 'reset': self.inter.nudity_reset},
-            self.inter.fullyNude: {'this': 'fullyNude', 'that': 'fullyClothed', 'reset': self.inter.nudity_reset},
-            self.inter.smiling: {'this': 'smiling', 'that': 'glaring', 'reset': self.inter.expression_reset},
-            self.inter.glaring: {'this': 'glaring', 'that': 'smiling', 'reset': self.inter.expression_reset}
+            self.inter.ass: {'this': 'ass', 'that': 'assExposed',
+                             'reset': self.inter.ass_reset},
+            self.inter.assExposed: {'this': 'assExposed', 'that': 'ass',
+                                    'reset': self.inter.ass_reset},
+            self.inter.breasts: {'this': 'breasts', 'that': 'breastsExposed',
+                                 'reset': self.inter.breasts_reset},
+            self.inter.breastsExposed: {'this': 'breastsExposed',
+                                        'that': 'breasts',
+                                        'reset': self.inter.breasts_reset},
+            self.inter.pussy: {'this': 'pussy', 'that': 'pussyExposed',
+                               'reset': self.inter.pussy_reset},
+            self.inter.pussyExposed: {'this': 'pussyExposed', 'that': 'pussy',
+                                      'reset': self.inter.pussy_reset},
+            self.inter.fullyClothed: {'this': 'fullyClothed',
+                                      'that': 'fullyNude',
+                                      'reset': self.inter.nudity_reset},
+            self.inter.fullyNude: {'this': 'fullyNude', 'that': 'fullyClothed',
+                                   'reset': self.inter.nudity_reset},
+            self.inter.smiling: {'this': 'smiling', 'that': 'glaring',
+                                 'reset': self.inter.expression_reset},
+            self.inter.glaring: {'this': 'glaring', 'that': 'smiling',
+                                 'reset': self.inter.expression_reset}
         }
         self.inter.actionOpen.triggered.connect(self.inter.media.open_file) # type: ignore
         self.inter.next.triggered.connect(self.inter.media.next) # type: ignore
@@ -99,6 +111,7 @@ class MainWindow(QMainWindow):
                 break
 
     def save_tags(self):
+        """Save tags for currently loaded image into its iTxt data."""
         file = self.inter.media.filename
         img = Image.open(file)
         img.load()
@@ -113,6 +126,7 @@ class MainWindow(QMainWindow):
         img.save(file, pnginfo=txt)
 
     def load_tags(self):
+        """Load tags from iTxt data."""
         for radio in self.radios:
             if radio.isChecked():
                 self.radios[radio]['reset'].toggle()

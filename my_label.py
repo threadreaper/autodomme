@@ -4,7 +4,6 @@ from contextlib import suppress
 
 import os
 
-from PIL import Image
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal # pylint: disable=no-name-in-module
 from PySide6.QtGui import (QPixmap, QTransform, QPainter, QPen, QResizeEvent, # pylint: disable=no-name-in-module
     QWheelEvent, QMouseEvent, QPaintEvent) # pylint: disable=no-name-in-module
@@ -29,6 +28,9 @@ class MediaLabel(QLabel):
         self.delta_y = 0
         self.view_rect = self.contentsRect()
         self.offset: QPoint = QPoint(0, 0)
+        self.pixmap_is_scaled = False
+        self.transforms = []
+        self.last_file = self.filename
 
     def open_file(self, file: str) -> None:
         """
@@ -46,6 +48,8 @@ class MediaLabel(QLabel):
                 if file == index_file:
                     self.index = i
         new_pix = QPixmap(file)
+        if len(self.transforms) > 0:
+            new_pix = self.apply_transforms()
         self.filename = file
         self.update_pixmap(new_pix)
         self.reloaded.emit() #type: ignore
@@ -81,6 +85,7 @@ class MediaLabel(QLabel):
     def resizeEvent(self, event: QResizeEvent) -> None: # pylint: disable=unused-argument, invalid-name
         """Updates the geometry of the widget and reloads the current pixmap
         when the widget gets resized."""
+        print('firing resize')
         self.updateGeometry()
         self.reload()
 
@@ -98,6 +103,8 @@ class MediaLabel(QLabel):
         """Mirros the current image and prompts the user to save the modified
         file."""
         new_pix = self.pixmap().transformed(QTransform().scale(-1, 1)) # type: ignore
+        if self.pixmap_is_scaled:
+            self.transforms.append('mirror')
         self.dirty = True
         self.update_pixmap(new_pix)
 
@@ -107,15 +114,37 @@ class MediaLabel(QLabel):
         self.open_file(f"{self.dir_now}/{self.files[self.index]}")
 
     def save_image(self) -> None:
-        """Save the modified image file."""
-        # TODO: make this work
+        """
+        Save the modified image file.  If the current pixmap has been
+        scaled, we need to load a non-scaled pixmap from the original file and
+        re-apply the transformations that have been performed to prevent it
+        from being saved as the scaled-down image.
+        """
+        if self.pixmap_is_scaled:
+            pix = self.apply_transforms()
+            pix.save(self.filename, quality=-1)
+        else:
+            self.pixmap().save(self.filename, quality=-1)
         if self.dirty is True:
             self.dirty = False
+
+    def apply_transforms(self):
+        pix = QPixmap(self.filename)
+        for transform in self.transforms:
+            if transform == 'right':
+                pix = pix.transformed(QTransform().rotate(90)) # type: ignore
+            elif transform == 'left':
+                pix = pix.transformed(QTransform().rotate(-90)) # type: ignore
+            elif transform == 'mirror':
+                pix = pix.transformed(QTransform().scale(-1, 1)) # type: ignore
+        return pix
 
     def rotate_right(self) -> None:
         """Rotate the current image 90 degrees to the right and prompts the
         user to save the modified image."""
         new_pix = self.pixmap().transformed(QTransform().rotate(90)) #type: ignore
+        if self.pixmap_is_scaled:
+            self.transforms.append('right')
         self.dirty = True
         self.update_pixmap(new_pix)
 
@@ -123,6 +152,8 @@ class MediaLabel(QLabel):
         """Rotate the current image 90 degrees to the left and prompts the
         user to save the modified image."""
         new_pix = self.pixmap().transformed(QTransform().rotate(-90)) #type: ignore
+        if self.pixmap_is_scaled:
+            self.transforms.append('left')
         self.dirty = True
         self.update_pixmap(new_pix)
 
@@ -193,6 +224,9 @@ class MediaLabel(QLabel):
         :param new: The new `QPixmap` to be displayed.
         :param scaled: If False, don't scale the image to fit the viewport.
         """
+        self.pixmap_is_scaled = scaled
+        if self.last_file != self.filename:
+            self.transforms = []
         new_pix = self.scale_to_fit(new) if scaled else new
         self.delta_x = int((new_pix.width() - self.contentsRect().width()) / 2)
         self.delta_y = int((new_pix.height() - self.contentsRect().height()) / 2)
@@ -201,6 +235,7 @@ class MediaLabel(QLabel):
             QSize(self.contentsRect().width(), self.contentsRect().height()),
         )
         self.setPixmap(new_pix)
+        self.last_file = self.filename
 
     def paintEvent(self, event: QPaintEvent): #pylint: disable=unused-argument, invalid-name
         """Fired when the view is repainted."""
