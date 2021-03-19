@@ -132,9 +132,8 @@ class Client:
                 if self.options['SAVE_CREDENTIALS']:
                     self.options['USERNAME'] = username
                 self.send_message('%s %s' % (username, password), 'LOG')
-                self.recv_lock.acquire()
-                msg_type, answer = self.recv()
-                self.recv_lock.release()
+                with self.recv_lock:
+                    msg_type, answer = self.recv()
                 login.close()
                 if msg_type == 'LOG':
                     return answer.decode()
@@ -181,11 +180,10 @@ class Client:
         """Receive messages from the server."""
         while True:
             try:
-                self.recv_lock.acquire()
-                msg_type, msg = open_package(self.session.srv_key,
-                                             self.private_key,
-                                             self.socket)
-                self.recv_lock.release()
+                with self.recv_lock:
+                    msg_type, msg = open_package(self.session.srv_key,
+                                                self.private_key,
+                                                self.socket)
                 if len(msg) == 0:
                     break
                 if msg_type == 'MSG':
@@ -221,7 +219,6 @@ class Client:
         :returns: The file requested from the server.
         :rtype: bytes
         """
-        # TODO: change this and associated serverside funcs to new method
         self.send_message(filename, 'IMG')
         return open_package(self.session.srv_key, self.private_key,
                             self.socket)

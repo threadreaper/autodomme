@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSizePolicy,
-    QSlider,
     QStatusBar,
     QTabWidget,
     QWidget,

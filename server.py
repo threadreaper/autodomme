@@ -244,14 +244,13 @@ class Server(object):
         else:
             person.name = person.options['CHAT_NAME']
         msg = ('%s has joined the chat!' % person.name.lstrip('@'))
-        self.client_lock.acquire()
-        self.clients.append(person)
-        self.broadcast(msg, "")
-        if person.ops:
-            msg = ('Server sets mode +o %s' % person.name.lstrip('@'))
+        with self.client_lock:
+            self.clients.append(person)
             self.broadcast(msg, "")
-            self._send_session_vars()
-        self.client_lock.release()
+            if person.ops:
+                msg = ('Server sets mode +o %s' % person.name.lstrip('@'))
+                self.broadcast(msg, "")
+                self._send_session_vars()
         return True
 
     def _send_session_vars(self) -> None:
@@ -304,9 +303,8 @@ class Server(object):
                                person.options['CHAT_NAME'])
                     self.broadcast(message, "")
                     person.socket.close()
-                    self.client_lock.acquire()
-                    self.clients.remove(person)
-                    self.client_lock.release()
+                    with self.client_lock:
+                        self.clients.remove(person)
                     break
                 else:
                     self.broadcast(msg.decode(),
@@ -357,10 +355,9 @@ class Server(object):
         :param image: /path/to/image
         :type image: str
         """
-        self.client_lock.acquire()
-        for person in self.clients:
-            self.send_message(person, image, 'IMG')
-        self.client_lock.release()
+        with self.client_lock:
+            for person in self.clients:
+                self.send_message(person, image, 'IMG')
 
     def _serve_file(self, person: Person, file: str) -> None:
         """
