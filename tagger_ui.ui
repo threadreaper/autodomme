@@ -581,10 +581,114 @@
         <string/>
        </property>
       </widget>
+      <widget class="QRadioButton" name="ass_reset">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>230</y>
+         <width>0</width>
+         <height>0</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>assReset</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">buttonGroup_3</string>
+       </attribute>
+      </widget>
+      <widget class="QRadioButton" name="breasts_reset">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>239</y>
+         <width>0</width>
+         <height>0</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>RadioButton</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">buttonGroup_2</string>
+       </attribute>
+      </widget>
+      <widget class="QRadioButton" name="pussy_reset">
+       <property name="geometry">
+        <rect>
+         <x>4</x>
+         <y>250</y>
+         <width>0</width>
+         <height>0</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>RadioButton</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">buttonGroup</string>
+       </attribute>
+      </widget>
+      <widget class="QRadioButton" name="nudity_reset">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>240</y>
+         <width>0</width>
+         <height>0</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>RadioButton</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">nudity</string>
+       </attribute>
+      </widget>
+      <widget class="QRadioButton" name="expression_reset">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>260</y>
+         <width>0</width>
+         <height>0</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>RadioButton</string>
+       </property>
+       <attribute name="buttonGroup">
+        <string notr="true">expression</string>
+       </attribute>
+      </widget>
      </widget>
     </item>
     <item row="1" column="0" colspan="2">
-     <widget class="QGroupBox" name="groupBox">
+     <widget class="QGroupBox" name="assReset">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
         <horstretch>0</horstretch>
@@ -1104,7 +1208,7 @@
   <connection>
    <sender>actionBrowser</sender>
    <signal>toggled(bool)</signal>
-   <receiver>groupBox</receiver>
+   <receiver>assReset</receiver>
    <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">

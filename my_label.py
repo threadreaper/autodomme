@@ -49,7 +49,6 @@ class MediaLabel(QLabel):
         self.filename = file
         self.update_pixmap(new_pix)
         self.reloaded.emit() #type: ignore
-        print('emitted reload')
 
     def scale_to_fit(self, new_pix: QPixmap) -> QPixmap:
         """

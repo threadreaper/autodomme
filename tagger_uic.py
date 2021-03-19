@@ -46,16 +46,16 @@ class MainWindow(QMainWindow):
         self.setIconSize(QSize(32, 32))
         self.inter.setupUi(self)
         self.radios = {
-            self.inter.ass: {'this': 'ass', 'that': 'assExposed'},
-            self.inter.assExposed: {'this': 'assExposed', 'that': 'ass'},
-            self.inter.breasts: {'this': 'breasts', 'that': 'breastsExposed'},
-            self.inter.breastsExposed: {'this': 'breastsExposed', 'that': 'breasts'},
-            self.inter.pussy: {'this': 'pussy', 'that': 'pussyExposed'},
-            self.inter.pussyExposed: {'this': 'pussyExposed', 'that': 'pussy'},
-            self.inter.fullyClothed: {'this': 'fullyClothed', 'that': 'fullyNude'},
-            self.inter.fullyNude: {'this': 'fullyNude', 'that': 'fullyClothed'},
-            self.inter.smiling: {'this': 'smiling', 'that': 'glaring'},
-            self.inter.glaring: {'this': 'glaring', 'that': 'smiling'}
+            self.inter.ass: {'this': 'ass', 'that': 'assExposed', 'reset': self.inter.ass_reset},
+            self.inter.assExposed: {'this': 'assExposed', 'that': 'ass', 'reset': self.inter.ass_reset},
+            self.inter.breasts: {'this': 'breasts', 'that': 'breastsExposed', 'reset': self.inter.breasts_reset},
+            self.inter.breastsExposed: {'this': 'breastsExposed', 'that': 'breasts', 'reset': self.inter.breasts_reset},
+            self.inter.pussy: {'this': 'pussy', 'that': 'pussyExposed', 'reset': self.inter.pussy_reset},
+            self.inter.pussyExposed: {'this': 'pussyExposed', 'that': 'pussy', 'reset': self.inter.pussy_reset},
+            self.inter.fullyClothed: {'this': 'fullyClothed', 'that': 'fullyNude', 'reset': self.inter.nudity_reset},
+            self.inter.fullyNude: {'this': 'fullyNude', 'that': 'fullyClothed', 'reset': self.inter.nudity_reset},
+            self.inter.smiling: {'this': 'smiling', 'that': 'glaring', 'reset': self.inter.expression_reset},
+            self.inter.glaring: {'this': 'glaring', 'that': 'smiling', 'reset': self.inter.expression_reset}
         }
         self.inter.actionOpen.triggered.connect(self.inter.media.open_file) # type: ignore
         self.inter.next.triggered.connect(self.inter.media.next) # type: ignore
@@ -103,8 +103,9 @@ class MainWindow(QMainWindow):
         img = Image.open(file)
         img.load()
         txt = PngInfo()
-        for key, value, in img.text.items(): # type: ignore
-            txt.add_itxt(key, value)
+        with suppress(AttributeError):
+            for key, value, in img.text.items(): # type: ignore
+                txt.add_itxt(key, value)
         for key in self.radios:
             if key.isChecked():
                 txt.add_itxt(self.radios[key]['this'], 'True')
@@ -113,7 +114,8 @@ class MainWindow(QMainWindow):
 
     def load_tags(self):
         for radio in self.radios:
-            radio.setChecked(False)
+            if radio.isChecked():
+                self.radios[radio]['reset'].toggle()
         filename = self.inter.media.filename
         fqp = filename
         img = Image.open(fqp)
