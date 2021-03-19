@@ -12,6 +12,8 @@ from PySide6.QtWidgets import QFileDialog, QLabel, QApplication, QWidget # pylin
 class MediaLabel(QLabel):
     """Custom image viewer/editor widget"""
     reloaded = Signal()
+    annotate_rect = Signal(QRect)
+    cropping_rect = Signal()
 
     def __init__(self, parent: QWidget) -> None:
         super(MediaLabel, self).__init__('', parent)
@@ -19,6 +21,7 @@ class MediaLabel(QLabel):
         self.mouse_down = False
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
         self.crop_started = False
+        self.annotate_started = True
         self.dir_now = os.getcwd()
         self.files = self.refresh_files()
         self.index = 0
@@ -77,12 +80,6 @@ class MediaLabel(QLabel):
             for file in sorted(files, key=lambda x: x.lower())
             if file.endswith((".png", ".jpg", ".gif", ".bmp", ".jpeg"))
         ]
-
-    def resizeEvent(self, event: QResizeEvent) -> None: # pylint: disable=unused-argument, invalid-name
-        """Updates the geometry of the widget and reloads the current pixmap
-        when the widget gets resized."""
-        self.updateGeometry()
-        self.reload()
 
     def next(self) -> None:
         """Opens the next image in the file list."""
@@ -166,6 +163,10 @@ class MediaLabel(QLabel):
         # TODO: make this work
         self.crop_started = True
 
+    def annotate(self):
+        """Starts an annotate action"""
+        self.annotate_started = True
+
     def wheelEvent(self, event: QWheelEvent) -> None: # pylint: disable=invalid-name
         """With Ctrl depressed, zoom the current image, otherwise fire the
         next/previous functions."""
@@ -190,23 +191,29 @@ class MediaLabel(QLabel):
         elif event.button() == Qt.MouseButton.BackButton:
             self.previous()
         self.mouse_pos = event.pos()
-        if self.crop_started:
+        if self.crop_started or self.annotate_started:
             self.crop_rect.setTopLeft(event.pos())
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
         """Event handler for mouse movement events. Used to draw the cropping
         rectangle while a crop action is in progress."""
-        if self.crop_started:
+        if self.crop_started or self.annotate_started:
             self.crop_rect.setBottomRight(event.pos())
             self.update() # type: ignore
 
-    def mouseReleasedEvent(self, event: QMouseEvent) -> None: # pylint: disable=invalid-name
-        """Event handler for mouse button release events. Used to finalize the
-        bounding box for a crop action."""
-        if self.crop_started:
-            self.crop_started = False
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None: # pylint: disable=invalid-name
+        """Event handler for mouse button release events.  Used to finalize
+        the bounding rect for crop or annotation actions."""
+        if self.crop_started or self.annotate_started:
             self.crop_rect.setBottomRight(event.pos())
             self.update() # type: ignore
+            if self.annotate_started:
+                self.annotate_rect.emit(self.crop_rect)
+                self.annotate_started = False
+            else:
+                self.crop_started = False
+                self.cropping_rect.emit(self.crop_rect)
+
 
     def actual_size(self) -> None:
         """Display the current image at its actual size, rather than scaled to

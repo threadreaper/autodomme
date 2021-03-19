@@ -7,7 +7,7 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QSizePolicy # pylint: disable=no-name-in-module
 from PySide6.QtGui import QPixmap, QMouseEvent, QIcon # pylint: disable=no-name-in-module
-from PySide6.QtCore import QSize, Qt # pylint: disable=no-name-in-module
+from PySide6.QtCore import QSize, Qt, QRect, Slot # pylint: disable=no-name-in-module
 
 from tagger_ui import Ui_MainWindow
 from icons import icon as bmp
@@ -45,6 +45,10 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(app_icon)
         self.setIconSize(QSize(32, 32))
         self.inter.setupUi(self)
+        self.active_tag = ''
+        self.button_groups = [self.inter.buttonGroup, self.inter.buttonGroup_2,
+                              self.inter.buttonGroup_3, self.inter.expression,
+                              self.inter.nudity]
         self.radios = {
             self.inter.ass: {'this': 'ass', 'that': 'assExposed',
                              'reset': self.inter.ass_reset},
@@ -85,6 +89,29 @@ class MainWindow(QMainWindow):
         self.inter.media.reloaded.connect(self.browser) # type: ignore
         self.inter.media.reloaded.connect(self.load_tags) # type: ignore
         self.inter.pushButton.clicked.connect(self.save_tags) # type: ignore
+        self.inter.ass.toggled.connect(lambda: self.change_cursor('ass')) # type: ignore
+        self.inter.assExposed.toggled.connect(lambda: self.change_cursor('assExposed')) # type: ignore
+        self.inter.breasts.toggled.connect(lambda: self.change_cursor('breasts')) # type: ignore
+        self.inter.breastsExposed.toggled.connect(lambda: self.change_cursor('breastsExposed')) # type: ignore
+        self.inter.pussy.toggled.connect(lambda: self.change_cursor('pussy')) # type: ignore
+        self.inter.pussyExposed.toggled.connect(lambda: self.change_cursor('pussyExposed')) # type: ignore
+        self.inter.fullyClothed.toggled.connect(lambda: self.change_cursor('fullyClothed')) # type: ignore
+        self.inter.fullyNude.toggled.connect(lambda: self.change_cursor('fullyNude')) # type: ignore
+        self.inter.smiling.toggled.connect(lambda: self.change_cursor('smiling')) # type: ignore
+        self.inter.glaring.toggled.connect(lambda: self.change_cursor('glaring')) # type: ignore
+        self.inter.media.annotate_rect.connect(self.annotation) # type: ignore
+
+    def change_cursor(self, sender):
+        """Changes the cursor when the user applies an annotation requiring
+        position data."""
+        self.active_tag = sender
+        self.setCursor(Qt.CrossCursor)
+        self.inter.media.annotate()
+
+    def annotation(self, rect: QRect):
+        txt = PngInfo()
+        txt.add_itxt(self.active_tag, str(rect.x()), str(rect.y()), str(rect.width()), str(rect.height()))
+        print(self.active_tag, str(rect.x()), str(rect.y()), str(rect.width()), str(rect.height()))
 
     def browser(self):
         """Slot function to initialize image thumbnails for the
@@ -129,7 +156,7 @@ class MainWindow(QMainWindow):
         """Load tags from iTxt data."""
         for radio in self.radios:
             if radio.isChecked():
-                self.radios[radio]['reset'].toggle()
+                self.radios[radio]['reset'].setChecked(True)
         filename = self.inter.media.filename
         fqp = filename
         img = Image.open(fqp)
