@@ -21,7 +21,7 @@ class MediaLabel(QLabel):
         self.mouse_down = False
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
         self.crop_started = False
-        self.annotate_started = True
+        self.annotate_started = False
         self.dir_now = os.getcwd()
         self.files = self.refresh_files()
         self.index = 0
@@ -206,13 +206,30 @@ class MediaLabel(QLabel):
         the bounding rect for crop or annotation actions."""
         if self.crop_started or self.annotate_started:
             self.crop_rect.setBottomRight(event.pos())
+            size = self.crop_rect.size()
             self.update() # type: ignore
+            new_x = (self.size().width() / 2) - (
+                self.pixmap().size().width() / 2)
+            new_y = (self.size().height() / 2) - (
+                self.pixmap().size().height() / 2)
+
+            self.crop_rect.setX(self.crop_rect.x() - new_x) # type: ignore
+            self.crop_rect.setY(self.crop_rect.y() - new_y) # type: ignore
+            self.crop_rect.setSize(size)
+            if self.pixmap_is_scaled:
+                factor = QPixmap(
+                    self.filename).size().width() / self.pixmap().size().width()
+                self.crop_rect = (
+                    QRect(int(self.crop_rect.x() * factor), # type: ignore
+                            int(self.crop_rect.y() * factor), # type: ignore
+                            int(self.crop_rect.width() * factor), # type: ignore
+                            int(self.crop_rect.height() * factor)))
             if self.annotate_started:
-                self.annotate_rect.emit(self.crop_rect)
                 self.annotate_started = False
+                self.annotate_rect.emit(self.crop_rect) # type: ignore
             else:
                 self.crop_started = False
-                self.cropping_rect.emit(self.crop_rect)
+                self.cropping_rect.emit(self.crop_rect) # type: ignore
 
 
     def actual_size(self) -> None:
@@ -248,6 +265,6 @@ class MediaLabel(QLabel):
                 QPoint(abs(self.delta_x), abs(self.delta_y)), self.pixmap()) # type: ignore
         else:
             painter.drawPixmap(self.contentsRect(), self.pixmap()) # type: ignore
-        if self.crop_rect.x() > 0:
+        if self.crop_started or self.annotate_started:
             painter.setPen(QPen(Qt.red, 1, Qt.SolidLine)) # type: ignore
             painter.drawRect(self.crop_rect) # type: ignore

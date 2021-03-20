@@ -7,7 +7,7 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QSizePolicy # pylint: disable=no-name-in-module
 from PySide6.QtGui import QPixmap, QMouseEvent, QIcon # pylint: disable=no-name-in-module
-from PySide6.QtCore import QSize, Qt, QRect, Slot # pylint: disable=no-name-in-module
+from PySide6.QtCore import QSize, Qt, QRect # pylint: disable=no-name-in-module
 
 from tagger_ui import Ui_MainWindow
 from icons import icon as bmp
