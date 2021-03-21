@@ -10,14 +10,15 @@ from contextlib import suppress
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
-from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal, QTimer # pylint: disable=no-name-in-module
-from PySide6.QtGui import (QAction, QIcon, QMouseEvent, # pylint: disable=no-name-in-module
+from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal, QTimer, QRectF # pylint: disable=no-name-in-module
+from PySide6.QtGui import (QAction, QIcon, QMouseEvent, QWindow, QPen, # pylint: disable=no-name-in-module
                            QPixmap, QTransform, QWheelEvent, QBrush)# pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QGridLayout, # pylint: disable=no-name-in-module
                                QHBoxLayout, QLabel, QMainWindow, QMenu, # pylint: disable=no-name-in-module
                                QMenuBar, QPushButton, QRadioButton,# pylint: disable=no-name-in-module
                                QSizePolicy, QToolBar, QWidget,  QFileDialog, # pylint: disable=no-name-in-module;
-                               QGraphicsView, QGraphicsScene, QGraphicsPixmapItem)# pylint: disable=no-name-in-module;
+                               QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
+                               QGraphicsRectItem)# pylint: disable=no-name-in-module;
 
 from icons import delete, icon, next_icon, play, previous, left, right, reload
 
@@ -45,6 +46,42 @@ class ClickableLabel(QLabel):
         """When this label is clicked, open the associated image file."""
         self.app.open_file(self.file)
 
+class MyView(QGraphicsView):
+    got_rect = Signal(tuple)
+
+    def __init__(self, scene: QGraphicsScene, parent: QMainWindow):
+        QGraphicsView.__init__(self, scene, parent)
+        self.setMouseTracking(True)
+        self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
+        self.g_rect = QGraphicsRectItem()
+        self.setParent(parent)
+        self.app = self.parent()
+        self.mouse_down = False
+        self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
+        self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense7Pattern))
+
+
+    def mousePressEvent(self, event):
+        if self.app.crop_button.isChecked():
+            self.mouse_down = True
+            point = self.mapToScene(event.pos())
+            self.crop_rect.setTopLeft(point.toPoint())
+            self.scene().addItem(self.g_rect)
+
+
+    def mouseMoveEvent(self, event):
+        if self.app.crop_button.isChecked() and self.mouse_down:
+            point = self.mapToScene(event.pos())
+            self.crop_rect.setBottomRight(point.toPoint())
+            self.g_rect.setRect(self.crop_rect)
+
+    def mouseReleaseEvent(self, event):
+        if self.app.crop_button.isChecked():
+            point = self.mapToScene(event.pos())
+            self.crop_rect.setBottomRight(point.toPoint())
+            self.g_rect.setRect(self.crop_rect)
+            self.got_rect.emit((self.g_rect.rect().topLeft(), self.g_rect.rect().bottomRight()))
+            self.mouse_down = False
 
 class MainWindow(QMainWindow):
     """Main application window"""
@@ -126,7 +163,7 @@ class MainWindow(QMainWindow):
         self.media = QGraphicsScene(self)
         self.media.setItemIndexMethod(QGraphicsScene.NoIndex)
         self.media.setBackgroundBrush(QBrush(Qt.black))
-        self.view = QGraphicsView(self.media, self.centralwidget)
+        self.view = MyView(self.media, self)
         self.view.setSizePolicy(EXP_EXP)
         self.media.setSceneRect(0, 0, self.view.width(), self.view.height())
         self.grid.addWidget(self.view, 0, 0, 1, 1)
@@ -264,6 +301,7 @@ class MainWindow(QMainWindow):
 
         self.no_save_button.clicked.connect(self.reload)
         self.browser_button.toggled.connect(self.browse_bar.setVisible)
+        self.play_button.toggled.connect(lambda: self.frame.setVisible((True, False)[self.frame.isVisible()]))
         self.reload_button.triggered.connect(self.reload)
         self.mirror_button.triggered.connect(lambda: self.pixmap.setScale(-1))
         self.save_button.clicked.connect(self.save_image)
@@ -275,6 +313,7 @@ class MainWindow(QMainWindow):
         self.browser_button.triggered.connect(self.browser)
         self.save_tags_button.clicked.connect(self.save_tags)
         self.annotate_rect.connect(self.annotation)
+        self.view.got_rect.connect(self.set_rect)
 
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
         self.annotate_started = False
@@ -285,13 +324,26 @@ class MainWindow(QMainWindow):
         self.pixmap_is_scaled = False
         self.pixmap = QGraphicsPixmapItem()
         self.active_tag = ''
+        self.reset_browser = False
+
+    def set_rect(self, rect):
+        self.crop_rect = QRect(rect[0].toPoint(), rect[1].toPoint())
+        self.crop_button.toggle()
 
     def keyPressEvent(self, event):
+        print(event.key())
         if event.key() == Qt.Key_Escape and self.play_button.isChecked():
             self.play_button.toggle()
+            if self.reset_browser:
+                self.browser_button.toggle()
+        elif event.key() in [16777220, 16777221] and self.crop_rect.width() > 0:
+            self.update_pixmap(self.pixmap.pixmap().copy(self.crop_rect))
 
     def play(self):
         if self.play_button.isChecked():
+            if self.browser_button.isChecked():
+                self.browser_button.toggle()
+                self.reset_browser = True
             QTimer.singleShot(3000, self.play)
             self.next()
 
@@ -365,7 +417,6 @@ class MainWindow(QMainWindow):
             os.remove(f"{self.dir_now}/{self.files.pop(self.index)}")
         self.refresh_files()
 
-
     def reload(self) -> None:
         """Reloads the current pixmap; used to update the screen when the
         current file is changed."""
@@ -396,7 +447,22 @@ class MainWindow(QMainWindow):
         self.update_pixmap(QPixmap(self.files[self.index]), False)
         self.view.setDragMode(QGraphicsView.ScrollHandDrag)
 
-    def update_pixmap(self, new: QPixmap, scaled: bool = True) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None: # pylint: disable=invalid-name
+        """Event handler for mouse button presses."""
+        if event.button() == Qt.MouseButton.ForwardButton:
+            self.next()
+        elif event.button() == Qt.MouseButton.BackButton:
+            self.previous()
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
+        """Event handler for mouse movement events. Used to draw the cropping
+        rectangle while a crop action is in progress."""
+        if self.crop_button.isChecked() or self.annotate_started:
+            self.crop_rect.setBottomRight(event.pos())
+            self.media.addRect(self.crop_rect, QPen(Qt.red, 1, Qt.SolidLine))
+            self.media.update()
+
+    def update_pixmap(self, new, scaled: bool = True) -> None:
         """
         Updates the currently displayed image.
 
@@ -404,18 +470,15 @@ class MainWindow(QMainWindow):
         :param scaled: If False, don't scale the image to fit the viewport.
         """
         self.pixmap_is_scaled = scaled
-        if scaled and (new.size().width() > self.view.width() or
-            new.size().height() > self.view.height()):
-            new = new.scaled(self.view.size() * 0.99,
-                             Qt.KeepAspectRatio,
-                             Qt.SmoothTransformation)
         self.media.clear()
         self.pixmap = self.media.addPixmap(new)
         self.pixmap.setTransformOriginPoint(
             self.pixmap.boundingRect().width() / 2,
             self.pixmap.boundingRect().height() / 2)
+        if scaled and (new.size().width() > self.view.width() or
+            new.size().height() > self.view.height()):
+            self.view.fitInView(self.pixmap, Qt.KeepAspectRatio)
         self.media.setSceneRect(self.pixmap.boundingRect())
-        self.view.centerOn(self.pixmap)
 
     def annotation(self, rect: QRect):
         """Creates image coordinate annotation data."""
@@ -476,8 +539,6 @@ class MainWindow(QMainWindow):
                     for radio in self.radios:
                         if key == self.radios[radio]['this']:
                             radio.setChecked(True)
-
-
 
 
 if __name__ == "__main__":
