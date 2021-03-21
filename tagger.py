@@ -3,15 +3,14 @@
 for nudity detection."""
 from __future__ import annotations
 
-from memory_profiler import profile
 import os
 import sys
 from contextlib import suppress
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
-from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal, QTimer, QRectF # pylint: disable=no-name-in-module
-from PySide6.QtGui import (QAction, QIcon, QMouseEvent, QWindow, QPen, # pylint: disable=no-name-in-module
+from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal, QTimer, QPointF # pylint: disable=no-name-in-module
+from PySide6.QtGui import (QAction, QIcon, QMouseEvent, QPen, QKeyEvent,# pylint: disable=no-name-in-module
                            QPixmap, QTransform, QWheelEvent, QBrush)# pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QGridLayout, # pylint: disable=no-name-in-module
                                QHBoxLayout, QLabel, QMainWindow, QMenu, # pylint: disable=no-name-in-module
@@ -47,6 +46,7 @@ class ClickableLabel(QLabel):
         self.app.open_file(self.file)
 
 class MyView(QGraphicsView):
+    """Custom graphics view class for drawing crop rectangles"""
     got_rect = Signal(tuple)
 
     def __init__(self, scene: QGraphicsScene, parent: QMainWindow):
@@ -60,25 +60,23 @@ class MyView(QGraphicsView):
         self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
         self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense7Pattern))
 
-
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
+        """Mouse event handler; begins a crop action"""
         if self.app.crop_button.isChecked():
             self.mouse_down = True
-            point = self.mapToScene(event.pos())
-            self.crop_rect.setTopLeft(point.toPoint())
+            self.crop_rect.setTopLeft(self.mapToScene(event.pos()).toPoint())
             self.scene().addItem(self.g_rect)
 
-
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
+        """Expand crop rectangle"""
         if self.app.crop_button.isChecked() and self.mouse_down:
-            point = self.mapToScene(event.pos())
-            self.crop_rect.setBottomRight(point.toPoint())
+            self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
+        """Completes the crop rectangle."""
         if self.app.crop_button.isChecked():
-            point = self.mapToScene(event.pos())
-            self.crop_rect.setBottomRight(point.toPoint())
+            self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
             self.got_rect.emit((self.g_rect.rect().topLeft(), self.g_rect.rect().bottomRight()))
             self.mouse_down = False
@@ -96,11 +94,29 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("BossyBot 2000 - Image Tagger")
         self.setWindowIcon(self.load_icon(icon))
 
+        self.menubar = QMenuBar(self)
+        self.menubar.setSizePolicy(EXP_MAX)
+        self.menubar.setMaximumSize(QSize(INFINITE, 30))
+        self.menu_file = QMenu('File', self.menubar)
+        self.menu_options = QMenu('Options', self.menubar)
+        self.menu_help = QMenu('Help', self.menubar)
+        self.menubar.addAction(self.menu_file.menuAction())
+        self.menubar.addAction(self.menu_options.menuAction())
+        self.menubar.addAction(self.menu_help.menuAction())
+        self.open = QAction('Open', self)
+        self.menu_file.addAction(self.open)
+        self.open.triggered.connect(self.open_file)
+        self.exit_button = QAction('Exit', self)
+        self.exit_button.triggered.connect(lambda: sys.exit(0), Qt.QueuedConnection)
+        self.menu_file.addAction(self.exit_button)
+        self.setMenuBar(self.menubar)
+
         self.previous_button = QAction(self.load_icon(previous), '<<', self)
         self.next_button = QAction(self.load_icon(next_icon), '>>', self)
         self.rotate_left_button = QAction(self.load_icon(left), '', self)
         self.rotate_right_button = QAction(self.load_icon(right), '', self)
         self.play_button = QAction(self.load_icon(play), '', self)
+        self.play_button.setCheckable(True)
         self.delete_button = QAction(self.load_icon(delete), '', self)
         self.reload_button = QAction(self.load_icon(reload), '', self)
         self.mirror_button = QAction('Mirror', self)
@@ -122,25 +138,6 @@ class MainWindow(QMainWindow):
             self.next_button: {'shortcut': 'Right', 'connect': self.next},
             self.reload_button: {'shortcut': 'F5', 'connect': self.reload}
         }
-
-        self.play_button.setCheckable(True)
-
-        self.menubar = QMenuBar(self)
-        self.menubar.setSizePolicy(EXP_MAX)
-        self.menubar.setMaximumSize(QSize(INFINITE, 30))
-        self.menu_file = QMenu('File', self.menubar)
-        self.menu_options = QMenu('Options', self.menubar)
-        self.menu_help = QMenu('Help', self.menubar)
-        self.menubar.addAction(self.menu_file.menuAction())
-        self.menubar.addAction(self.menu_options.menuAction())
-        self.menubar.addAction(self.menu_help.menuAction())
-        self.open = QAction('Open', self)
-        self.menu_file.addAction(self.open)
-        self.open.triggered.connect(self.open_file)
-        self.exit_button = QAction('Exit', self)
-        self.exit_button.triggered.connect(lambda: sys.exit(0), Qt.QueuedConnection)
-        self.menu_file.addAction(self.exit_button)
-        self.setMenuBar(self.menubar)
 
         self.toolbar = QToolBar(self)
         self.toolbar.setSizePolicy(EXP_MAX)
@@ -169,7 +166,8 @@ class MainWindow(QMainWindow):
         self.grid.addWidget(self.view, 0, 0, 1, 1)
 
         self.frame = QFrame(self.centralwidget)
-        self.frame.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding))
+        self.frame.setSizePolicy(QSizePolicy(QSizePolicy.Fixed,
+                                             QSizePolicy.MinimumExpanding))
         self.frame.setMinimumSize(QSize(325, 500))
         self.frame.setStyleSheet(
             "QFrame { border: 4px inset #222; border-radius: 10; }")
@@ -234,28 +232,41 @@ class MainWindow(QMainWindow):
         self.grid3.setContentsMargins(0, 15, 0, 0)
 
         self.radios = {
-            self.ass: {'this': 'ass', 'that': 'ass_exposed', 'group': self.ass_group,
-                             'reset': self.ass_reset, 'grid': (0, 0, 1, 1)},
-            self.ass_exposed: {'this': 'ass_exposed', 'that': 'ass', 'group': self.ass_group,
-                                    'reset': self.ass_reset, 'grid': (0, 1, 1, 1)},
-            self.breasts: {'this': 'breasts', 'that': 'breasts_exposed', 'group': self.breasts_group,
-                                 'reset': self.breasts_reset, 'grid': (1, 0, 1, 1)},
-            self.breasts_exposed: {'this': 'breasts_exposed',
-                                        'that': 'breasts', 'group': self.breasts_group,
-                                        'reset': self.breasts_reset, 'grid': (1, 1, 1, 1)},
-            self.pussy: {'this': 'pussy', 'that': 'pussy_exposed', 'group': self.pussy_group,
-                               'reset': self.pussy_reset, 'grid': (2, 0, 1, 1)},
-            self.pussy_exposed: {'this': 'pussy_exposed', 'that': 'pussy', 'group': self.pussy_group,
-                                      'reset': self.pussy_reset, 'grid': (2, 1, 1, 1)},
+            self.ass: {'this': 'ass', 'that': 'ass_exposed',
+                       'group': self.ass_group, 'reset': self.ass_reset,
+                       'grid': (0, 0, 1, 1)},
+            self.ass_exposed: {'this': 'ass_exposed', 'that': 'ass',
+                               'group': self.ass_group, 'reset': self.ass_reset,
+                               'grid': (0, 1, 1, 1)},
+            self.breasts: {'this': 'breasts', 'that': 'breasts_exposed',
+                           'group': self.breasts_group,
+                           'reset': self.breasts_reset, 'grid': (1, 0, 1, 1)},
+            self.breasts_exposed: {'this': 'breasts_exposed','that': 'breasts',
+                                   'group': self.breasts_group,
+                                   'reset': self.breasts_reset,
+                                   'grid': (1, 1, 1, 1)},
+            self.pussy: {'this': 'pussy', 'that': 'pussy_exposed',
+                         'group': self.pussy_group, 'reset': self.pussy_reset,
+                         'grid': (2, 0, 1, 1)},
+            self.pussy_exposed: {'this': 'pussy_exposed', 'that': 'pussy',
+                                 'group': self.pussy_group,
+                                 'reset': self.pussy_reset,
+                                 'grid': (2, 1, 1, 1)},
             self.fully_clothed: {'this': 'fully_clothed',
-                                      'that': 'fully_nude', 'group': self.nudity,
-                                      'reset': self.nudity_reset, 'grid': (3, 0, 1, 1)},
-            self.fully_nude: {'this': 'fully_nude', 'that': 'fully_clothed', 'group': self.nudity,
-                                   'reset': self.nudity_reset, 'grid': (3, 1, 1, 1)},
-            self.smiling: {'this': 'smiling', 'that': 'glaring', 'group': self.expression,
-                                 'reset': self.expression_reset, 'grid': (4, 0, 1, 1)},
-            self.glaring: {'this': 'glaring', 'that': 'smiling', 'group': self.expression,
-                                 'reset': self.expression_reset, 'grid': (4, 1, 1, 1)},
+                                 'that': 'fully_nude', 'group': self.nudity,
+                                 'reset': self.nudity_reset,
+                                 'grid': (3, 0, 1, 1)},
+            self.fully_nude: {'this': 'fully_nude', 'that': 'fully_clothed',
+                              'group': self.nudity, 'reset': self.nudity_reset,
+                              'grid': (3, 1, 1, 1)},
+            self.smiling: {'this': 'smiling', 'that': 'glaring',
+                           'group': self.expression,
+                           'reset': self.expression_reset,
+                           'grid': (4, 0, 1, 1)},
+            self.glaring: {'this': 'glaring', 'that': 'smiling',
+                           'group': self.expression,
+                           'reset': self.expression_reset,
+                           'grid': (4, 1, 1, 1)},
         }
 
         for radio in self.radios:
@@ -301,11 +312,12 @@ class MainWindow(QMainWindow):
 
         self.no_save_button.clicked.connect(self.reload)
         self.browser_button.toggled.connect(self.browse_bar.setVisible)
-        self.play_button.toggled.connect(lambda: self.frame.setVisible((True, False)[self.frame.isVisible()]))
+        self.play_button.toggled.connect(
+            lambda: self.frame.setVisible(
+                (True, False)[self.frame.isVisible()]))
         self.reload_button.triggered.connect(self.reload)
         self.mirror_button.triggered.connect(lambda: self.pixmap.setScale(-1))
         self.save_button.clicked.connect(self.save_image)
-
         self.crop_button.toggled.connect(
             lambda: self.setCursor(Qt.CrossCursor) if
             self.crop_button.isChecked() else self.unsetCursor())
@@ -326,20 +338,24 @@ class MainWindow(QMainWindow):
         self.active_tag = ''
         self.reset_browser = False
 
-    def set_rect(self, rect):
+    def set_rect(self, rect: tuple[QPointF, QPointF]):
+        """Converts the crop rectangle to a QRect after a crop action"""
         self.crop_rect = QRect(rect[0].toPoint(), rect[1].toPoint())
         self.crop_button.toggle()
 
-    def keyPressEvent(self, event):
-        print(event.key())
+    def keyPressEvent(self, event: QKeyEvent): # pylint: disable=invalid-name;
+        """Keyboard event handler."""
         if event.key() == Qt.Key_Escape and self.play_button.isChecked():
             self.play_button.toggle()
             if self.reset_browser:
                 self.browser_button.toggle()
         elif event.key() in [16777220, 16777221] and self.crop_rect.width() > 0:
             self.update_pixmap(self.pixmap.pixmap().copy(self.crop_rect))
+            for _ in (self.label, self.save_button, self.no_save_button):
+                _.show()
 
     def play(self):
+        """Starts a slideshow."""
         if self.play_button.isChecked():
             if self.browser_button.isChecked():
                 self.browser_button.toggle()
