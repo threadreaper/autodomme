@@ -132,12 +132,13 @@ class MyView(QGraphicsView):
                 self.g_rect.rect().adjusted(0, 0, delta.x(), delta.y()))
 
     def edge(self, pos):
-        event_pos = self.mapToScene(pos())
+        event_pos = self.mapToScene(pos()).toPoint()
         rect_left = int(self.g_rect.rect().left())
         rect_right = int(self.g_rect.rect().right())
         rect_top = int(self.g_rect.rect().top())
         rect_bottom = int(self.g_rect.rect().bottom())
         on_left, on_right, on_top, on_bottom = (False, False, False, False)
+        print(event_pos.x(), rect_left)
         if event_pos.x() in range(rect_left - 10, rect_left + 10):
             on_left = True
         if event_pos.x() in range(rect_right - 10, rect_right + 10):
