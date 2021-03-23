@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QGridLayout, 
                                QMenuBar, QPushButton, QRadioButton,# pylint: disable=no-name-in-module
                                QSizePolicy, QToolBar, QWidget,  QFileDialog, # pylint: disable=no-name-in-module;
                                QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
-                               QGraphicsRectItem)# pylint: disable=no-name-in-module;
+                               QGraphicsRectItem, QGraphicsItem)# pylint: disable=no-name-in-module;
 
 from icons import delete, icon, next_icon, play, previous, left, right, reload
 
@@ -51,35 +51,120 @@ class MyView(QGraphicsView):
 
     def __init__(self, scene: QGraphicsScene, parent: QMainWindow):
         QGraphicsView.__init__(self, scene, parent)
-        self.setMouseTracking(True)
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
         self.g_rect = QGraphicsRectItem()
         self.setParent(parent)
         self.app = self.parent()
         self.mouse_down = False
         self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
-        self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense7Pattern))
+        self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense6Pattern))
+        self.mouse_pos = QPoint(0, 0)
+        self.adjustment = ''
+        self.crop_phase_2 = False
+
+    def reset(self):
+        if self.app.crop_button.isChecked():
+            self.app.reload()
+            self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
+            self.g_rect = QGraphicsRectItem()
+            self.g_rect.setRect(self.crop_rect)
+            self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
+            self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense6Pattern))
+            self.setMouseTracking(False)
 
     def mousePressEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Mouse event handler; begins a crop action"""
+        self.mouse_down = True
+        self.mouse_pos = self.mapToScene(event.pos()).toPoint()
         if self.app.crop_button.isChecked():
-            self.mouse_down = True
             self.crop_rect.setTopLeft(self.mapToScene(event.pos()).toPoint())
             self.scene().addItem(self.g_rect)
+        elif self.hasMouseTracking() and self.g_rect.isUnderMouse:
+            self.adjustment = self.edge(event.pos)[1]
+        else:
+            QGraphicsView.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Expand crop rectangle"""
-        if self.app.crop_button.isChecked() and self.mouse_down:
+        if type(event) == QWheelEvent:
+            event.ignore()
+        if self.app.crop_button.isChecked() and not self.crop_phase_2 and self.mouse_down:
             self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
+        if self.hasMouseTracking():
+            self.setCursor(
+                (Qt.ArrowCursor, self.edge(event.pos)[0])
+                [self.g_rect.isUnderMouse()])
+            QGraphicsView.mouseMoveEvent(self, event)
+            if self.mouse_down:
+                self.move_rect(event.pos)
+
+    def move_rect(self, pos):
+        delta = self.mapToScene(pos()).toPoint() - self.mouse_pos
+        self.mouse_pos = self.mapToScene(pos()).toPoint()
+        if self.adjustment == 'inside':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(delta.x(), delta.y(),
+                                            delta.x(), delta.y()))
+        elif self.adjustment == 'left':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(delta.x(), 0, 0, 0))
+        elif self.adjustment == 'right':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(0, 0, delta.x(), 0))
+        elif self.adjustment == 'top':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(0, delta.y(), 0, 0))
+        elif self.adjustment == 'bottom':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(0, 0, 0, delta.y()))
+        elif self.adjustment == 'top_left':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(delta.x(), delta.y(), 0, 0))
+        elif self.adjustment == 'top_right':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(0, delta.y(), delta.x(), 0))
+        elif self.adjustment == 'bot_left':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(delta.x(), 0, 0, delta.y()))
+        elif self.adjustment == 'bot_right':
+            self.g_rect.setRect(
+                self.g_rect.rect().adjusted(0, 0, delta.x(), delta.y()))
+
+    def edge(self, pos):
+        event_pos = self.mapToScene(pos())
+        rect_left = int(self.g_rect.rect().left())
+        rect_right = int(self.g_rect.rect().right())
+        rect_top = int(self.g_rect.rect().top())
+        rect_bottom = int(self.g_rect.rect().bottom())
+        on_left, on_right, on_top, on_bottom = (False, False, False, False)
+        if event_pos.x() in range(rect_left - 10, rect_left + 10):
+            on_left = True
+        if event_pos.x() in range(rect_right - 10, rect_right + 10):
+            on_right = True
+        if event_pos.y() in range(rect_top - 10, rect_top + 10):
+            on_top = True
+        if event_pos.y() in range(rect_bottom - 10, rect_bottom + 10):
+            on_bottom = True
+        if (on_left and on_bottom) or (on_top and on_right):
+            return (Qt.SizeBDiagCursor, ('bot_left', 'top_right')[on_right])
+        if (on_left and on_top) | (on_right and on_bottom):
+            return (Qt.SizeFDiagCursor, ('top_left', 'bot_right')[on_right])
+        if on_left | on_right:
+            return (Qt.SizeHorCursor, ('left', 'right')[on_right])
+        if on_top | on_bottom:
+            return (Qt.SizeVerCursor, ('top', 'bottom')[on_bottom])
+        else:
+            return ((Qt.OpenHandCursor, Qt.ClosedHandCursor)[self.mouse_down], 'inside')
 
     def mouseReleaseEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Completes the crop rectangle."""
+        self.mouse_down = False
         if self.app.crop_button.isChecked():
             self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
-            self.got_rect.emit((self.g_rect.rect().topLeft(), self.g_rect.rect().bottomRight()))
-            self.mouse_down = False
+            self.setMouseTracking(True)
+            self.app.crop_button.setChecked(False)
 
 class MainWindow(QMainWindow):
     """Main application window"""
@@ -321,6 +406,7 @@ class MainWindow(QMainWindow):
         self.crop_button.toggled.connect(
             lambda: self.setCursor(Qt.CrossCursor) if
             self.crop_button.isChecked() else self.unsetCursor())
+        self.crop_button.toggled.connect(self.view.reset)
         self.actual_size_button.triggered.connect(self.actual_size)
         self.browser_button.triggered.connect(self.browser)
         self.save_tags_button.clicked.connect(self.save_tags)
@@ -341,7 +427,7 @@ class MainWindow(QMainWindow):
     def set_rect(self, rect: tuple[QPointF, QPointF]):
         """Converts the crop rectangle to a QRect after a crop action"""
         self.crop_rect = QRect(rect[0].toPoint(), rect[1].toPoint())
-        self.crop_button.toggle()
+        self.media.crop_phase_2 = False
 
     def keyPressEvent(self, event: QKeyEvent): # pylint: disable=invalid-name;
         """Keyboard event handler."""
@@ -349,7 +435,9 @@ class MainWindow(QMainWindow):
             self.play_button.toggle()
             if self.reset_browser:
                 self.browser_button.toggle()
-        elif event.key() in [16777220, 16777221] and self.crop_rect.width() > 0:
+        elif event.key() in [16777220, 16777221] and self.g_rect.rect().width() > 0:
+            self.media.got_rect.emit((self.media.g_rect.rect().topLeft(),
+                                      self.media.g_rect.rect().bottomRight()))
             self.update_pixmap(self.pixmap.pixmap().copy(self.crop_rect))
             for _ in (self.label, self.save_button, self.no_save_button):
                 _.show()
@@ -387,6 +475,7 @@ class MainWindow(QMainWindow):
         for i, index_file in enumerate(self.files):
             if file.split('/')[-1] == index_file:
                 self.index = i
+        self.view.setTransform(QTransform())
         self.update_pixmap(QPixmap(file))
         self.browser()
         self.load_tags()
@@ -437,7 +526,6 @@ class MainWindow(QMainWindow):
         """Reloads the current pixmap; used to update the screen when the
         current file is changed."""
         self.open_file(f"{self.dir_now}/{self.files[self.index]}")
-        self.view.setDragMode(QGraphicsView.NoDrag)
 
     def annotate(self, tag):
         """Starts an annotate action"""
@@ -470,21 +558,16 @@ class MainWindow(QMainWindow):
         elif event.button() == Qt.MouseButton.BackButton:
             self.previous()
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
-        """Event handler for mouse movement events. Used to draw the cropping
-        rectangle while a crop action is in progress."""
-        if self.crop_button.isChecked() or self.annotate_started:
-            self.crop_rect.setBottomRight(event.pos())
-            self.media.addRect(self.crop_rect, QPen(Qt.red, 1, Qt.SolidLine))
-            self.media.update()
-
-    def update_pixmap(self, new, scaled: bool = True) -> None:
+    def update_pixmap(self, new: QPixmap, scaled: bool = True) -> None:
         """
         Updates the currently displayed image.
 
         :param new: The new `QPixmap` to be displayed.
         :param scaled: If False, don't scale the image to fit the viewport.
         """
+        if self.view.hasMouseTracking():
+            print('disabling view mouse')
+            self.view.setMouseTracking(False)
         self.pixmap_is_scaled = scaled
         self.media.clear()
         self.pixmap = self.media.addPixmap(new)
