@@ -11,13 +11,13 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from PySide6.QtCore import QPoint, QRect, QRectF, QSize, Qt, Signal, QTimer, QPointF # pylint: disable=no-name-in-module
 from PySide6.QtGui import (QAction, QIcon, QMouseEvent, QPen, QKeyEvent,# pylint: disable=no-name-in-module
-                           QPixmap, QTransform, QWheelEvent, QBrush)# pylint: disable=no-name-in-module
+                           QPixmap, QTransform, QWheelEvent, QBrush, QPolygonF)# pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QGridLayout, # pylint: disable=no-name-in-module
                                QHBoxLayout, QLabel, QMainWindow, QMenu, # pylint: disable=no-name-in-module
                                QMenuBar, QPushButton, QRadioButton,# pylint: disable=no-name-in-module
                                QSizePolicy, QToolBar, QWidget,  QFileDialog, # pylint: disable=no-name-in-module;
                                QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
-                               QGraphicsRectItem, )# pylint: disable=no-name-in-module;
+                               QGraphicsRectItem)# pylint: disable=no-name-in-module;
 
 from icons import delete, icon, next_icon, play, previous, left, right, reload
 
@@ -138,7 +138,6 @@ class MyView(QGraphicsView):
         rect_top = int(self.g_rect.rect().top())
         rect_bottom = int(self.g_rect.rect().bottom())
         on_left, on_right, on_top, on_bottom = (False, False, False, False)
-        print(event_pos.x(), rect_left)
         if event_pos.x() in range(rect_left - 10, rect_left + 10):
             on_left = True
         if event_pos.x() in range(rect_right - 10, rect_right + 10):
@@ -438,7 +437,10 @@ class MainWindow(QMainWindow):
         elif event.key() in [16777220, 16777221] and self.view.g_rect.rect().width() > 0:
             self.view.got_rect.emit((self.view.g_rect.rect().topLeft(),
                                       self.view.g_rect.rect().bottomRight()))
-            self.update_pixmap(self.pixmap.pixmap().copy(self.crop_rect))
+            new_pix = self.pixmap.pixmap().copy(self.crop_rect)
+            if self.pixmap_is_scaled:
+                new_pix = new_pix.transformed(self.view.transform().inverted()[0], Qt.SmoothTransformation)
+            self.update_pixmap(new_pix)
             for _ in (self.label, self.save_button, self.no_save_button):
                 _.show()
 
