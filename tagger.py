@@ -9,9 +9,9 @@ from contextlib import suppress
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
-from PySide6.QtCore import QPoint, QRect, QRectF, QSize, Qt, Signal, QTimer, QPointF # pylint: disable=no-name-in-module
+from PySide6.QtCore import QPoint, QRect, QMarginsF, QRectF, QSize, Qt, Signal, QTimer, QPointF # pylint: disable=no-name-in-module
 from PySide6.QtGui import (QAction, QIcon, QMouseEvent, QPen, QKeyEvent,# pylint: disable=no-name-in-module
-                           QPixmap, QTransform, QWheelEvent, QBrush, QPolygonF)# pylint: disable=no-name-in-module
+                           QPixmap, QTransform, QWheelEvent, QBrush)# pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QGridLayout, # pylint: disable=no-name-in-module
                                QHBoxLayout, QLabel, QMainWindow, QMenu, # pylint: disable=no-name-in-module
                                QMenuBar, QPushButton, QRadioButton,# pylint: disable=no-name-in-module
@@ -60,9 +60,11 @@ class MyView(QGraphicsView):
         self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense6Pattern))
         self.mouse_pos = QPoint(0, 0)
         self.adjustment = ''
+        self.annotation = False
 
     def reset(self):
-        if self.crop_btn.isChecked():
+        if self.crop_btn.isChecked() or self.annotation:
+            print('called')
             self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
             self.g_rect = QGraphicsRectItem(QRectF(self.crop_rect))
             self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
@@ -76,9 +78,12 @@ class MyView(QGraphicsView):
         """Mouse event handler; begins a crop action"""
         self.mouse_down = True
         self.mouse_pos = self.mapToScene(event.pos()).toPoint()
-        if self.crop_btn.isChecked():
+        if self.crop_btn.isChecked() or self.annotation:
             self.crop_rect.setTopLeft(self.mapToScene(event.pos()).toPoint())
             self.scene().addItem(self.g_rect)
+        if self.annotation:
+            self.g_rect.setPen(QPen(Qt.magenta, 1, Qt.SolidLine))
+            self.g_rect.setBrush(QBrush(Qt.magenta, Qt.Dense4Pattern))
         elif self.hasMouseTracking() and self.g_rect.isUnderMouse:
             self.adjustment = self.edge(event.pos)[1]
         else:
@@ -86,18 +91,24 @@ class MyView(QGraphicsView):
 
     def mouseMoveEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Expand crop rectangle"""
-        if isinstance(event, QWheelEvent):
+        if not self.crop_btn.isChecked and not self.annotation and not self.hasMouseTracking():
             event.ignore()
-        if self.crop_btn.isChecked() and self.mouse_down:
+        if self.crop_btn.isChecked() | self.annotation and self.mouse_down:
             self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
         if self.hasMouseTracking():
             self.setCursor(
                 (Qt.ArrowCursor, self.edge(event.pos)[0])
-                [self.g_rect.isUnderMouse()])
-            QGraphicsView.mouseMoveEvent(self, event)
+                [self.is_under_mouse(self.g_rect.rect())])
             if self.mouse_down:
                 self.move_rect(event.pos)
+
+    def is_under_mouse(self, rect: QRectF):
+        widen = rect + QMarginsF(10, 10, 10, 10)
+        self.g_rect.setRect(widen)
+        res = self.g_rect.isUnderMouse()
+        self.g_rect.setRect(rect)
+        return res
 
     def move_rect(self, pos):
         delta = self.mapToScene(pos()).toPoint() - self.mouse_pos
@@ -160,11 +171,13 @@ class MyView(QGraphicsView):
     def mouseReleaseEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Completes the crop rectangle."""
         self.mouse_down = False
-        if self.crop_btn.isChecked():
+        if self.crop_btn.isChecked() | self.annotation:
             self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
             self.setMouseTracking(True)
             self.crop_btn.setChecked(False)
+            self.annotation = False
+            self.unsetCursor()
 
 class MainWindow(QMainWindow):
     """Main application window"""
@@ -397,6 +410,7 @@ class MainWindow(QMainWindow):
 
         self.no_save_button.clicked.connect(self.reload)
         self.browser_button.toggled.connect(self.browse_bar.setVisible)
+
         self.play_button.toggled.connect(
             lambda: self.frame.setVisible(
                 (True, False)[self.frame.isVisible()]))
@@ -406,6 +420,7 @@ class MainWindow(QMainWindow):
         self.crop_button.toggled.connect(
             lambda: self.setCursor(Qt.CrossCursor) if
             self.crop_button.isChecked() else self.unsetCursor())
+        self.play_button.toggled.connect(lambda: self.browser_button.setChecked((True, False)[self.browse_bar.isVisible()]))
         self.crop_button.toggled.connect(self.view.reset)
         self.actual_size_button.triggered.connect(self.actual_size)
         self.browser_button.triggered.connect(self.browser)
@@ -414,7 +429,6 @@ class MainWindow(QMainWindow):
         self.view.got_rect.connect(self.set_rect)
 
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
-        self.annotate_started = False
         self.dir_now = os.getcwd()
         self.files = []
         self.index = 0
@@ -432,24 +446,31 @@ class MainWindow(QMainWindow):
         """Keyboard event handler."""
         if event.key() == Qt.Key_Escape and self.play_button.isChecked():
             self.play_button.toggle()
-            if self.reset_browser:
-                self.browser_button.toggle()
+            self.browser_button.setChecked((True, False)[self.reset_browser])
         elif event.key() in [16777220, 16777221] and self.view.g_rect.rect().width() > 0:
             self.view.got_rect.emit((self.view.g_rect.rect().topLeft(),
                                       self.view.g_rect.rect().bottomRight()))
-            new_pix = self.pixmap.pixmap().copy(self.crop_rect)
-            if self.pixmap_is_scaled:
-                new_pix = new_pix.transformed(self.view.transform().inverted()[0], Qt.SmoothTransformation)
-            self.update_pixmap(new_pix)
+            if self.view.g_rect.pen().color() == Qt.red:
+                new_pix = self.pixmap.pixmap().copy(self.crop_rect)
+                if self.pixmap_is_scaled:
+                    new_pix = new_pix.transformed(self.view.transform().inverted()[0], Qt.SmoothTransformation)
+                self.update_pixmap(new_pix)
+            elif self.view.g_rect.pen().color() == Qt.magenta:
+                self.view.annotation = False
+                print(self.crop_rect)
             for _ in (self.label, self.save_button, self.no_save_button):
                 _.show()
+            self.view.reset()
+
 
     def play(self):
         """Starts a slideshow."""
         if self.play_button.isChecked():
             if self.browser_button.isChecked():
-                self.browser_button.toggle()
+                #self.browser_button.toggle()
                 self.reset_browser = True
+            else:
+                self.reset_browser = False
             QTimer.singleShot(3000, self.play)
             self.next()
 
@@ -531,8 +552,9 @@ class MainWindow(QMainWindow):
 
     def annotate(self, tag):
         """Starts an annotate action"""
-        self.annotate_started = True
-        self.setCursor(Qt.CrossCursor)
+        self.view.annotation = True
+        self.view.reset()
+        self.view.setCursor(Qt.CrossCursor)
 
     def wheelEvent(self, event: QWheelEvent) -> None: # pylint: disable=invalid-name
         """With Ctrl depressed, zoom the current image, otherwise fire the
@@ -568,7 +590,8 @@ class MainWindow(QMainWindow):
         :param scaled: If False, don't scale the image to fit the viewport.
         """
         if self.view.hasMouseTracking():
-            self.view.setMouseTracking(False)
+            #self.view.setMouseTracking(False)
+            self.view.reset()
         self.pixmap_is_scaled = scaled
         self.media.clear()
         self.pixmap = self.media.addPixmap(new)
