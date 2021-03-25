@@ -54,6 +54,7 @@ class MyView(QGraphicsView):
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
         self.g_rect = QGraphicsRectItem(QRectF(self.crop_rect))
         self.setParent(parent)
+        self.app = self.parent()
         self.crop_btn = self.parent().crop_button
         self.mouse_down = False
         self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
@@ -63,16 +64,15 @@ class MyView(QGraphicsView):
         self.annotation = False
 
     def reset(self):
-        if self.crop_btn.isChecked() or self.annotation:
-            print('called')
-            self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
-            self.g_rect = QGraphicsRectItem(QRectF(self.crop_rect))
-            self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
-            self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense6Pattern))
-            self.setMouseTracking(False)
-            self.mouse_pos = QPoint(0, 0)
-            self.adjustment = ''
-            self.mouse_down = False
+        self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
+        self.g_rect = QGraphicsRectItem(QRectF(self.crop_rect))
+        self.g_rect.setPen(QPen(Qt.red, 1, Qt.SolidLine))
+        self.g_rect.setBrush(QBrush(Qt.red, Qt.Dense6Pattern))
+        self.setMouseTracking(False)
+        self.unsetCursor()
+        self.mouse_pos = QPoint(0, 0)
+        self.adjustment = ''
+        self.mouse_down = False
 
     def mousePressEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Mouse event handler; begins a crop action"""
@@ -89,7 +89,7 @@ class MyView(QGraphicsView):
         else:
             QGraphicsView.mousePressEvent(self, event)
 
-    def mouseMoveEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
+    def mouseMoveEvent(self, event: QMouseEvent):    # pylint: disable=invalid-name
         """Expand crop rectangle"""
         if not self.crop_btn.isChecked and not self.annotation and not self.hasMouseTracking():
             event.ignore()
@@ -102,6 +102,13 @@ class MyView(QGraphicsView):
                 [self.is_under_mouse(self.g_rect.rect())])
             if self.mouse_down:
                 self.move_rect(event.pos)
+
+
+    def wheelEvent(self, event: QMouseEvent):
+        if self.hasMouseTracking():
+            self.reset()
+        else:
+            event.ignore()
 
     def is_under_mouse(self, rect: QRectF):
         widen = rect + QMarginsF(10, 10, 10, 10)
@@ -467,7 +474,6 @@ class MainWindow(QMainWindow):
         """Starts a slideshow."""
         if self.play_button.isChecked():
             if self.browser_button.isChecked():
-                #self.browser_button.toggle()
                 self.reset_browser = True
             else:
                 self.reset_browser = False
@@ -560,14 +566,17 @@ class MainWindow(QMainWindow):
         """With Ctrl depressed, zoom the current image, otherwise fire the
         next/previous functions."""
         modifiers = QApplication.keyboardModifiers()
-        if event.angleDelta().y() == 120 and modifiers == Qt.ControlModifier:
-            self.pixmap.setScale(self.pixmap.scale() * 0.75)
-        elif event.angleDelta().y() == 120:
-            self.previous()
-        elif event.angleDelta().y() == -120 and modifiers == Qt.ControlModifier:
-            self.pixmap.setScale(self.pixmap.scale() * 1.25)
-        elif event.angleDelta().y() == -120:
-            self.next()
+        try:
+            if event.angleDelta().y() == 120 and modifiers == Qt.ControlModifier:
+                self.pixmap.setScale(self.pixmap.scale() * 0.75)
+            elif event.angleDelta().y() == 120:
+                self.previous()
+            elif event.angleDelta().y() == -120 and modifiers == Qt.ControlModifier:
+                self.pixmap.setScale(self.pixmap.scale() * 1.25)
+            elif event.angleDelta().y() == -120:
+                self.next()
+        except AttributeError:
+            print(event.type())
 
     def actual_size(self) -> None:
         """Display the current image at its actual size, rather than scaled to
@@ -589,9 +598,6 @@ class MainWindow(QMainWindow):
         :param new: The new `QPixmap` to be displayed.
         :param scaled: If False, don't scale the image to fit the viewport.
         """
-        if self.view.hasMouseTracking():
-            #self.view.setMouseTracking(False)
-            self.view.reset()
         self.pixmap_is_scaled = scaled
         self.media.clear()
         self.pixmap = self.media.addPixmap(new)
