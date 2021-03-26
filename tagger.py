@@ -11,13 +11,13 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from PySide6.QtCore import QPoint, QRect, QMarginsF, QRectF, QSize, Qt, Signal, QTimer, QPointF # pylint: disable=no-name-in-module
 from PySide6.QtGui import (QAction, QIcon, QMouseEvent, QPen, QKeyEvent,# pylint: disable=no-name-in-module
-                           QPixmap, QTransform, QWheelEvent, QBrush)# pylint: disable=no-name-in-module
+                           QPixmap, QTransform, QWheelEvent, QBrush, QFont)# pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QGridLayout, # pylint: disable=no-name-in-module
                                QHBoxLayout, QLabel, QMainWindow, QMenu, # pylint: disable=no-name-in-module
                                QMenuBar, QPushButton, QRadioButton,# pylint: disable=no-name-in-module
                                QSizePolicy, QToolBar, QWidget,  QFileDialog, # pylint: disable=no-name-in-module;
                                QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
-                               QGraphicsRectItem)# pylint: disable=no-name-in-module;
+                               QGraphicsRectItem, QGraphicsTextItem)# pylint: disable=no-name-in-module;
 
 from icons import delete, icon, next_icon, play, previous, left, right, reload
 
@@ -73,6 +73,11 @@ class MyView(QGraphicsView):
         self.mouse_pos = QPoint(0, 0)
         self.adjustment = ''
         self.mouse_down = False
+        if self.crop_btn.isChecked():
+            self.app.reload()
+            self.setCursor(Qt.CrossCursor)
+        if self.annotation:
+            self.setCursor(Qt.CrossCursor)
 
     def mousePressEvent(self, event: QMouseEvent): # pylint: disable=invalid-name
         """Mouse event handler; begins a crop action"""
@@ -91,8 +96,6 @@ class MyView(QGraphicsView):
 
     def mouseMoveEvent(self, event: QMouseEvent):    # pylint: disable=invalid-name
         """Expand crop rectangle"""
-        if not self.crop_btn.isChecked and not self.annotation and not self.hasMouseTracking():
-            event.ignore()
         if self.crop_btn.isChecked() | self.annotation and self.mouse_down:
             self.crop_rect.setBottomRight(self.mapToScene(event.pos()).toPoint())
             self.g_rect.setRect(self.crop_rect)
@@ -103,10 +106,12 @@ class MyView(QGraphicsView):
             if self.mouse_down:
                 self.move_rect(event.pos)
 
-
     def wheelEvent(self, event: QMouseEvent):
         if self.hasMouseTracking():
             self.reset()
+        elif self.annotation:
+            self.annotation = False
+            self.unsetCursor()
         else:
             event.ignore()
 
@@ -188,7 +193,6 @@ class MyView(QGraphicsView):
 
 class MainWindow(QMainWindow):
     """Main application window"""
-    annotate_rect = Signal(QRect)
 
     def __init__(self) -> None:
         QMainWindow.__init__(self)
@@ -379,7 +383,8 @@ class MainWindow(QMainWindow):
             radio.setMaximumSize(QSize(150, 22))
             self.radios[radio]['reset'].setGeometry(QRect(0, 0, 0, 0))
             self.grid3.addWidget(radio, *self.radios[radio]['grid'])
-            radio.toggled.connect(lambda: self.annotate(str(self._yield_radio())))
+            if self.radios[radio]['group'] != self.nudity:
+                radio.toggled.connect(lambda x=_, y=radio: self.annotate(self.radios[y]['this']))
             self.radios[radio]['group'].addButton(radio)
             self.radios[radio]['group'].addButton(self.radios[radio]['reset'])
 
@@ -424,15 +429,13 @@ class MainWindow(QMainWindow):
         self.reload_button.triggered.connect(self.reload)
         self.mirror_button.triggered.connect(lambda: self.pixmap.setScale(-1))
         self.save_button.clicked.connect(self.save_image)
-        self.crop_button.toggled.connect(
-            lambda: self.setCursor(Qt.CrossCursor) if
-            self.crop_button.isChecked() else self.unsetCursor())
-        self.play_button.toggled.connect(lambda: self.browser_button.setChecked((True, False)[self.browse_bar.isVisible()]))
+        self.play_button.toggled.connect(
+            lambda: self.browser_button.setChecked(
+                (True, False)[self.browse_bar.isVisible()]))
         self.crop_button.toggled.connect(self.view.reset)
         self.actual_size_button.triggered.connect(self.actual_size)
         self.browser_button.triggered.connect(self.browser)
         self.save_tags_button.clicked.connect(self.save_tags)
-        self.annotate_rect.connect(self.annotation)
         self.view.got_rect.connect(self.set_rect)
 
         self.crop_rect = QRect(QPoint(0, 0), QSize(0, 0))
@@ -444,6 +447,7 @@ class MainWindow(QMainWindow):
         self.pixmap = QGraphicsPixmapItem()
         self.active_tag = ''
         self.reset_browser = False
+        self.txt = PngInfo()
 
     def set_rect(self, rect: tuple[QPointF, QPointF]):
         """Converts the crop rectangle to a QRect after a crop action"""
@@ -454,21 +458,23 @@ class MainWindow(QMainWindow):
         if event.key() == Qt.Key_Escape and self.play_button.isChecked():
             self.play_button.toggle()
             self.browser_button.setChecked((True, False)[self.reset_browser])
-        elif event.key() in [16777220, 16777221] and self.view.g_rect.rect().width() > 0:
+        elif (event.key() in [16777220, 16777221] and
+              self.view.g_rect.rect().width() > 0):
             self.view.got_rect.emit((self.view.g_rect.rect().topLeft(),
                                       self.view.g_rect.rect().bottomRight()))
             if self.view.g_rect.pen().color() == Qt.red:
                 new_pix = self.pixmap.pixmap().copy(self.crop_rect)
                 if self.pixmap_is_scaled:
-                    new_pix = new_pix.transformed(self.view.transform().inverted()[0], Qt.SmoothTransformation)
+                    new_pix = new_pix.transformed(
+                        self.view.transform().inverted()[0],
+                        Qt.SmoothTransformation)
                 self.update_pixmap(new_pix)
             elif self.view.g_rect.pen().color() == Qt.magenta:
+                self.annotate_rect()
                 self.view.annotation = False
-                print(self.crop_rect)
             for _ in (self.label, self.save_button, self.no_save_button):
                 _.show()
             self.view.reset()
-
 
     def play(self):
         """Starts a slideshow."""
@@ -482,7 +488,7 @@ class MainWindow(QMainWindow):
 
     def _yield_radio(self):
         """Saves code connecting signals from all the radio buttons."""
-        yield from self.radios
+        yield from self.radios.keys().__str__()
 
     def load_icon(self, icon_file):
         """Loads an icon from Base64 encoded strings in icons.py."""
@@ -544,6 +550,7 @@ class MainWindow(QMainWindow):
             pix.save(self.files[self.index], quality=-1)
         else:
             self.pixmap.pixmap().save(self.files[self.index], quality=-1)
+        self.save_tags()
 
     def delete(self) -> None:
         """Deletes the current image from the file system."""
@@ -558,25 +565,23 @@ class MainWindow(QMainWindow):
 
     def annotate(self, tag):
         """Starts an annotate action"""
+        self.txt = PngInfo()
         self.view.annotation = True
+        self.active_tag = tag
         self.view.reset()
-        self.view.setCursor(Qt.CrossCursor)
 
     def wheelEvent(self, event: QWheelEvent) -> None: # pylint: disable=invalid-name
         """With Ctrl depressed, zoom the current image, otherwise fire the
         next/previous functions."""
         modifiers = QApplication.keyboardModifiers()
-        try:
-            if event.angleDelta().y() == 120 and modifiers == Qt.ControlModifier:
-                self.pixmap.setScale(self.pixmap.scale() * 0.75)
-            elif event.angleDelta().y() == 120:
-                self.previous()
-            elif event.angleDelta().y() == -120 and modifiers == Qt.ControlModifier:
-                self.pixmap.setScale(self.pixmap.scale() * 1.25)
-            elif event.angleDelta().y() == -120:
-                self.next()
-        except AttributeError:
-            print(event.type())
+        if event.angleDelta().y() == 120 and modifiers == Qt.ControlModifier:
+            self.view.scale(0.75, 0.75)
+        elif event.angleDelta().y() == 120:
+            self.previous()
+        elif event.angleDelta().y() == -120 and modifiers == Qt.ControlModifier:
+            self.view.scale(1.25, 1.25)
+        elif event.angleDelta().y() == -120:
+            self.next()
 
     def actual_size(self) -> None:
         """Display the current image at its actual size, rather than scaled to
@@ -609,15 +614,11 @@ class MainWindow(QMainWindow):
             self.view.fitInView(self.pixmap, Qt.KeepAspectRatio)
         self.media.setSceneRect(self.pixmap.boundingRect())
 
-    def annotation(self, rect: QRect):
+    def annotate_rect(self):
         """Creates image coordinate annotation data."""
-        txt = PngInfo()
-        if rect.x() < 0:
-            rect.setX(0)
-        if rect.y() < 0:
-            rect.setY(0)
-        txt.add_itxt(self.active_tag, str(rect.x()), str(rect.y()),
-                     str(rect.width()), str(rect.height()))
+        self.txt.add_itxt(f'{str(self.active_tag)}-rect',
+                          f'{str(self.crop_rect.x())}, {str(self.crop_rect.y())}, {str(self.crop_rect.width())}, {str(self.crop_rect.height())}')
+
 
     def browser(self):
         """Slot function to initialize image thumbnails for the
@@ -643,15 +644,13 @@ class MainWindow(QMainWindow):
         file = self.files[self.index]
         img = Image.open(file)
         img.load()
-        txt = PngInfo()
-        with suppress(AttributeError):
-            for key, value, in img.text.items():
-                txt.add_itxt(key, value)
+        for key, value, in img.text.items():
+            self.txt.add_itxt(key, value)
         for key in self.radios:
             if key.isChecked():
-                txt.add_itxt(self.radios[key]['this'], 'True')
-                txt.add_itxt(self.radios[key]['that'], 'False')
-        img.save(file, pnginfo=txt)
+                self.txt.add_itxt(self.radios[key]['this'], 'True')
+                self.txt.add_itxt(self.radios[key]['that'], 'False')
+        img.save(file, pnginfo=self.txt)
 
     def load_tags(self):
         """Load tags from iTxt data."""
@@ -668,6 +667,28 @@ class MainWindow(QMainWindow):
                     for radio in self.radios:
                         if key == self.radios[radio]['this']:
                             radio.setChecked(True)
+                            self.view.annotation = False
+                            self.active_tag = ''
+                            self.view.reset()
+            for key, value in img.text.items():
+                if key.endswith('-rect'):
+                    btn = [radio for radio in self.radios if
+                           self.radios[radio]['this'] == key.split('-')[0]]
+                    print(key, value)
+                    if btn[0].isChecked():
+                        coords = [int(coord) for coord in value.split(', ')]
+                        rect = QGraphicsRectItem(*coords)
+                        rect.setPen(QPen(Qt.magenta, 1, Qt.SolidLine))
+                        rect.setBrush(QBrush(Qt.magenta, Qt.Dense4Pattern))
+                        self.view.scene().addItem(rect)
+                        text = self.view.scene().addText(
+                            key.split('-')[0], QFont('monospace',
+                                                     20, 400, False))
+                        text.font().setPointSize(text.font().pointSize() * 2)
+                        text.update()
+                        text.setX(rect.rect().x() + 10)
+                        text.setY(rect.rect().y() + 10)
+                        print(f'set {key}')
 
 
 if __name__ == "__main__":
